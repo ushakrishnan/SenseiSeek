@@ -7,9 +7,12 @@ import { ViewNeedClient } from "./view-need-client";
 import { StartupNeeds } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
+import { useParams } from 'next/navigation';
 
-export default function ViewStartupNeedPage({ params }: { params: { id: string } }) {
+export default function ViewStartupNeedPage() {
     const { user } = useAuth();
+    const params = useParams();
+    const id = params.id as string;
     const [initialData, setInitialData] = useState<StartupNeeds | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -20,7 +23,7 @@ export default function ViewStartupNeedPage({ params }: { params: { id: string }
             // AuthProvider will redirect.
             return;
         }
-        getStartupNeed(params.id, user.uid).then(result => {
+        getStartupNeed(id, user.uid).then(result => {
             if (result.status === 'success' && result.need) {
                 setInitialData(result.need);
             } else {
@@ -28,7 +31,7 @@ export default function ViewStartupNeedPage({ params }: { params: { id: string }
             }
             setLoading(false);
         });
-    }, [params.id, user]);
+    }, [id, user]);
 
     if (loading) {
         return (
