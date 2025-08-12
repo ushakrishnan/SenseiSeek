@@ -6,14 +6,21 @@ import { getStartupNeed } from "@/lib/actions";
 import { ViewNeedClient } from "./view-need-client";
 import { StartupNeeds } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/components/auth-provider';
 
 export default function ViewStartupNeedPage({ params }: { params: { id: string } }) {
+    const { user } = useAuth();
     const [initialData, setInitialData] = useState<StartupNeeds | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        getStartupNeed(params.id).then(result => {
+        if (!user) {
+            // Don't fetch if user is not logged in yet.
+            // AuthProvider will redirect.
+            return;
+        }
+        getStartupNeed(params.id, user.uid).then(result => {
             if (result.status === 'success' && result.need) {
                 setInitialData(result.need);
             } else {
@@ -21,7 +28,7 @@ export default function ViewStartupNeedPage({ params }: { params: { id: string }
             }
             setLoading(false);
         });
-    }, [params.id]);
+    }, [params.id, user]);
 
     if (loading) {
         return (
