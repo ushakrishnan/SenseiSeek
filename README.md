@@ -23,6 +23,29 @@ Sensei Seek was built to solve this problem. Our platform uses AI-powered matchm
 
 ---
 
+## Platform Showcase
+
+Sensei Seek offers a seamless experience for both sides of the marketplace. Here's a glimpse into the platform's core user journeys.
+
+### **1. Attracting Top Talent: Marketing & Outreach**
+Our public-facing pages clearly articulate the value proposition to both innovative startups and seasoned executives, creating a compelling entry point into our ecosystem.
+
+![Sensei Seek Marketing Pages](public/assets/market2.gif)
+
+---
+### **2. The Startup Journey: Finding the Perfect Leader**
+Startups can create a detailed profile, define their specific executive needs with AI assistance, and then browse, filter, and shortlist from a pool of elite, vetted talent.
+
+![Sensei Seek Startup Flow](public/assets/startup2.gif)
+
+---
+### **3. The Executive Journey: Discovering High-Impact Roles**
+Executives craft a comprehensive profile, highlighting their expertise and accomplishments. They can then browse AI-matched opportunities, apply for roles, and manage their applications through a dedicated dashboard.
+
+![Sensei Seek Executive Flow](public/assets/exec2.gif)
+
+---
+
 ## Tech Stack
 
 - **Framework:** Next.js (App Router)
