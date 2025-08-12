@@ -10,11 +10,15 @@ This document provides a comprehensive overview of the features, user flows, and
 - **Fractional Roles**: The focus is on non-traditional, flexible employment models like fractional, interim, and advisory positions.
 - **Admin Oversight**: A super-user role (**Admin**) exists for platform management, user support, and data monitoring.
 
+![Sensei Seek Marketing Pages](../public/assets/market2.gif)
+
 ---
 
 ## 1. Executive User Flow & Features
 
 The journey for a fractional executive seeking opportunities.
+
+![Sensei Seek Executive Flow](../public/assets/exec2.gif)
 
 ### 1.1. Onboarding & Profile Management
 - **Signup**: Executives sign up via Email/Password or OAuth (Google, GitHub, Microsoft) and select the "Executive" role.
@@ -56,6 +60,8 @@ The journey for a fractional executive seeking opportunities.
 ## 2. Startup User Flow & Features
 
 The journey for a startup looking to hire executive talent.
+
+![Sensei Seek Startup Flow](../public/assets/startup2.gif)
 
 ### 2.1. Onboarding & Profile Management
 - **Signup**: Startups sign up and select the "Startup" role.
