@@ -42,3 +42,4 @@ next-env.d.ts
 
 push*.sh
 Releases.md
+NoDeploy.md

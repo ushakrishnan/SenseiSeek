@@ -4,34 +4,6 @@ This document outlines planned improvements and future features for the Sensei S
 
 ---
 
-## ⚠️ Immediate Security Fixes Required
-
-**THIS SECTION OUTLINES A CRITICAL VULNERABILITY THAT MUST BE ADDRESSED BEFORE THE APPLICATION IS CONSIDERED PRODUCTION-READY OR SAFELY OPEN-SOURCED.**
-
-### The Vulnerability: Insufficient Server-Side Authorization
-
-*   **Problem**: Currently, many server actions in `src/lib/actions.ts` trust the `userId` or `creatorId` sent from the client (e.g., `saveExecutiveProfile(userId, data)`). A malicious user could modify the client-side code to send a different user's ID, allowing them to perform actions on behalf of that user.
-*   **Impact**: This would allow any logged-in user to **read, edit, or delete data belonging to any other user** on the platform simply by crafting a custom request. This includes viewing and modifying profiles, needs, applications, and more. This is a severe vulnerability.
-
-### The Solution: Server-Side Validation & Firestore Rules
-
-A two-part fix is required to properly secure the application:
-
-1.  **Refactor Server Actions**:
-    *   All server actions that perform authenticated operations must be modified to **stop accepting a user ID from the client**.
-    *   Instead, they must securely get the authenticated user's ID directly from the server-side session cookie. This ensures that a user can only ever act on their own behalf.
-
-2.  **Implement Granular Firestore Security Rules**:
-    *   The `firestore.rules` file must be rewritten to enforce strict, role-based access control at the database level.
-    *   **Ownership**: Rules must ensure users can only write to their own profile documents (e.g., `/startup-profiles/{userId}`).
-    *   **Role-Based Access**: Create, read, and update operations must be restricted based on the user's role (`startup`, `executive`, `admin`) as defined in their Firebase Auth custom claims.
-    *   **Data Integrity**: Rules must prevent a user from creating data on behalf of another user (e.g., a startup can only create needs where `creatorId` matches their own `request.auth.uid`).
-    *   **Admin Privileges**: Only users with an `admin` role in their token should be able to access platform-wide data collections.
-
-This moves authorization from a trust-based client-side model to a secure, server-enforced model, which is the industry best practice.
-
----
-
 ## 1. Platform & Core Features
 
 These features are aimed at enhancing the core user experience and expanding the platform's value proposition.
