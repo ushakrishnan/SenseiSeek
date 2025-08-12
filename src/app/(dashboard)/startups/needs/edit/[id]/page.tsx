@@ -7,18 +7,21 @@ import { useEffect, useState } from 'react';
 import type { StartupNeeds } from "@/lib/types";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
+import { useParams } from "next/navigation";
 
 
-export default function EditStartupNeedPage({ params }: { params: { id: string } }) {
+export default function EditStartupNeedPage() {
     const { user } = useAuth();
+    const params = useParams();
+    const id = params.id as string;
     const [initialData, setInitialData] = useState<StartupNeeds | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!user) return;
+        if (!user || !id) return;
         
-        getStartupNeed(params.id, user.uid).then(result => {
+        getStartupNeed(id, user.uid).then(result => {
             if (result.status === 'success' && result.need) {
                 setInitialData(result.need);
             } else {
@@ -26,7 +29,7 @@ export default function EditStartupNeedPage({ params }: { params: { id: string }
             }
             setLoading(false);
         });
-    }, [params.id, user]);
+    }, [id, user]);
 
   if (loading) {
     return (
