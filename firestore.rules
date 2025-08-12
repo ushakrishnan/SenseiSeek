@@ -1,0 +1,85 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if a user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if the user is the owner of a document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Helper function to check if the user is an admin
+    function isAdmin() {
+      return request.auth.token.role == 'admin';
+    }
+
+    // Executive Profiles: Users can only read/write their own profile.
+    // Startups and admins can read all profiles.
+    match /executive-profiles/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || request.auth.token.role == 'startup' || isAdmin());
+      allow write: if isAuthenticated() && isOwner(userId);
+
+      // Saved Opportunities: Only the executive can manage their own list.
+      match /saved-opportunities/{needId} {
+        allow read, write, delete: if isAuthenticated() && isOwner(userId);
+      }
+    }
+
+    // Startup Profiles: Users can only read/write their own profile.
+    // Executives and admins can read all profiles.
+    match /startup-profiles/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || request.auth.token.role == 'executive' || isAdmin());
+      allow write: if isAuthenticated() && isOwner(userId);
+
+      // Shortlisted Executives: Only the startup can manage their own list.
+      match /shortlisted-executives/{executiveId} {
+        allow read, write, delete: if isAuthenticated() && isOwner(userId);
+      }
+    }
+
+    // Startup Needs: Startups can create/update their own needs. Authenticated users can read needs.
+    match /startup-needs/{needId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && request.auth.uid == request.resource.data.creatorId;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.creatorId;
+    }
+
+    // Applications:
+    // Executives can create applications for themselves.
+    // The involved startup can read/update the status.
+    match /applications/{applicationId} {
+        allow read: if isAuthenticated() && (isOwner(resource.data.executiveId) || isOwner(get(/databases/$(database)/documents/startup-needs/$(resource.data.startupNeedId)).data.creatorId));
+        allow create: if isAuthenticated() && isOwner(request.resource.data.executiveId);
+        allow update: if isAuthenticated() && isOwner(get(/databases/$(database)/documents/startup-needs/$(resource.data.startupNeedId)).data.creatorId);
+    }
+    
+    // Conversations & Messages
+    match /conversations/{conversationId} {
+      allow read, write: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      
+      match /messages/{messageId} {
+        // Users can read messages in conversations they participate in.
+        allow read: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        // Users can only create messages as themselves.
+        allow create: if isAuthenticated() && isOwner(request.resource.data.senderId);
+      }
+    }
+    
+    // Broadcasts: read-only for any authenticated user
+    match /broadcasts/{broadcastId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // No client-side writes
+    }
+    
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
