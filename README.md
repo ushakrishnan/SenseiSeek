@@ -86,8 +86,8 @@ Follow these instructions to get a local copy of the project up and running for 
 First, clone the project from GitHub to your local machine.
 
 ```bash
-git clone https://github.com/your-username/sensei-seek.git
-cd sensei-seek
+git clone https://github.com/ushakrishnan/senseiseek.git
+cd senseiseek
 ```
 
 ### Step 2: Install Dependencies
