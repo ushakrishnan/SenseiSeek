@@ -41,5 +41,5 @@ next-env.d.ts
 /src/lib/*.json
 
 push*.sh
-Releases.md
+RELEASES.md
 NoDeploy.md
