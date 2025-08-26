@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -7,6 +6,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/s
 import { Menu, LogOut } from 'lucide-react';
 import { Logo } from './logo';
 import { ThemeToggle } from './theme-toggle';
+import { GitHubIcon } from './icons/github-icon';
 import { useAuth } from './auth-provider';
 import { auth } from '@/lib/firebase-client';
 import { signOut } from 'firebase/auth';
@@ -22,12 +22,12 @@ export function Header() {
     await clearSessionCookie();
     router.push('/');
   };
-  
+
   const navItems = [
     { name: 'For Startups', href: '/startups' },
     { name: 'For Executives', href: '/executives' },
   ];
-  
+
   let dashboardLink = '/login';
   if (user && userDetails?.role) {
     if (userDetails.role === 'admin') {
@@ -101,8 +101,13 @@ export function Header() {
             </Link>
           </div>
         </div>
-        
+
         <div className="flex flex-1 items-center justify-end space-x-2">
+          <Button variant="ghost" size="icon" asChild>
+            <a href="https://github.com/ushakrishnan/SenseiSeek" target="_blank" rel="noopener noreferrer" title="View on GitHub">
+              <GitHubIcon className="h-4 w-4" />
+            </a>
+          </Button>
           <ThemeToggle />
           {user ? (
             <>

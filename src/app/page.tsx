@@ -1,5 +1,3 @@
-
-
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +5,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Rocket, Briefcase, Zap, Video, CheckCircle } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
+import HeroGithubBadge from '@/components/HeroGithubBadge';
+import GithubRibbon from '@/components/GithubRibbon';
 
 export default function HomePage() {
   const testimonials = [
@@ -30,6 +30,7 @@ export default function HomePage() {
 
   return (
     <div className="theme-orange">
+      <GithubRibbon repo="https://github.com/ushakrishnan/SenseiSeek" />
       <Header />
       <main className="flex-grow">
         <div className="w-full">
@@ -46,7 +47,7 @@ export default function HomePage() {
               <source src="/assets/homevideo.mp4" type="video/mp4" />
               Your browser does not support the video tag.
             </video>
-            
+
             <div className="relative z-20 container mx-auto text-center px-4">
               <h1 className="font-headline text-4xl md:text-6xl font-bold tracking-tighter">
                 Where Expertise Meets Opportunity.
@@ -54,6 +55,9 @@ export default function HomePage() {
               <p className="mt-4 max-w-3xl mx-auto text-lg text-white/80">
                 The premier platform connecting elite fractional executives with innovative startups poised for explosive growth. Find your strategic match and build the future, together.
               </p>
+              <div className="mt-6 flex justify-center">
+                <HeroGithubBadge repo="https://github.com/ushakrishnan/SenseiSeek" />
+              </div>
               <div className="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4">
                 <Button size="lg" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90" asChild>
                     <Link href="/startups">I'm a Startup Looking to Hire</Link>
@@ -109,7 +113,7 @@ export default function HomePage() {
               </div>
             </div>
           </section>
-          
+
           {/* Testimonials Section */}
           <section className="py-20 md:py-28 bg-secondary/50">
             <div className="container mx-auto px-4">
