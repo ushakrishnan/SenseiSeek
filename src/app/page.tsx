@@ -6,7 +6,6 @@ import { Rocket, Briefcase, Zap, Video, CheckCircle } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import HeroGithubBadge from '@/components/HeroGithubBadge';
-import GithubRibbon from '@/components/GithubRibbon';
 
 export default function HomePage() {
   const testimonials = [
@@ -30,7 +29,6 @@ export default function HomePage() {
 
   return (
     <div className="theme-orange">
-      <GithubRibbon repo="https://github.com/ushakrishnan/SenseiSeek" />
       <Header />
       <main className="flex-grow">
         <div className="w-full">
