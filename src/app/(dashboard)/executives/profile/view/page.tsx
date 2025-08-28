@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -20,6 +19,7 @@ import type { ExecutiveProfile } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { GitHubIcon } from "@/components/icons/github-icon";
 
 const getInitials = (name: string | null | undefined) => {
     if (!name) return "";
@@ -64,7 +64,7 @@ export default function ExecutiveProfileViewPage() {
             </div>
         )
     }
-    
+
     const locationString = [profile.city, profile.state, profile.country].filter(Boolean).join(', ');
 
     return (
@@ -154,6 +154,41 @@ export default function ExecutiveProfileViewPage() {
                                 <p className="text-muted-foreground">{accomplishment.value}</p>
                            </div>
                         ))}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>GitHub Highlights</CardTitle>
+                        <CardDescription>Public GitHub highlights (editable in your profile).</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {profile.githubHandle ? (
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <GitHubIcon className="h-5 w-5 text-muted-foreground" />
+                                        <a href={`https://github.com/${profile.githubHandle}`} target="_blank" rel="noopener noreferrer" className="underline font-medium">@{profile.githubHandle}</a>
+                                    </div>
+                                    <div>
+                                        <Button asChild size="sm" variant="outline">
+                                            <Link href="/executives/profile">Edit & Re-analyze</Link>
+                                        </Button>
+                                    </div>
+                                </div>
+                                {profile.githubInsights ? (
+                                    <div className="whitespace-pre-wrap prose prose-sm dark:prose-invert max-w-none text-muted-foreground">{profile.githubInsights}</div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">No GitHub highlights yet. Click Edit to analyze public repository data and generate highlights.</p>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-between">
+                                <p className="text-sm text-muted-foreground">No GitHub handle provided.</p>
+                                <Button asChild size="sm" variant="outline">
+                                    <Link href="/executives/profile">Add GitHub Handle</Link>
+                                </Button>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>

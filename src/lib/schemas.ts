@@ -1,10 +1,15 @@
-
-
 import { z } from 'zod';
 
 export const executiveProfileSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   photoUrl: z.string().optional(),
+  // Optional GitHub handle: providing this allows Sensei Seek to fetch public GitHub
+  // data and produce AI-augmented highlights that can be included in your profile
+  // and used to improve matching. You will be able to review and edit these
+  // insights before they are saved to your profile.
+  githubHandle: z.string().optional().or(z.literal('')),
+  // Freeform insights generated from the GitHub account (editable by the executive).
+  githubInsights: z.string().optional().or(z.literal('')),
   expertise: z.string().min(50, { message: 'Expertise summary must be at least 50 characters.' }),
   industryExperience: z.array(z.string()).min(1, { message: "Please specify at least one industry." }).max(12, {message: "Please select a maximum of 12 skills."}),
   availability: z.string().min(1, { message: 'Please select an availability option.' }),
@@ -42,7 +47,7 @@ export const startupProfileSchema = z.object({
   shortDescription: z.string().min(50, { message: 'Description must be at least 50 characters.' }),
   currentChallenge: z.string().min(50, { message: 'Challenge description must be at least 50 characters.' }),
   whyUs: z.string().min(50, { message: 'Value proposition must be at least 50 characters.' }),
-  
+
 });
 
 
@@ -85,6 +90,6 @@ export const contactFormSchema = z.object({
     subject: z.string().min(5, { message: "Subject must be at least 5 characters." }),
     message: z.string().min(20, { message: "Message must be at least 20 characters." }),
 });
-    
 
-    
+
+

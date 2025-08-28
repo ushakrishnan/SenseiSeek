@@ -1,13 +1,3 @@
-
-/*
-    NOTE: This server module interacts heavily with Firestore DocumentData which
-    is loosely typed at runtime. Runtime validation is performed via zod parsers
-    in `src/lib/validators.ts`. To avoid noisy, repetitive inline disables across
-    many mapping points we allow explicit `any` in this server file only so the
-    runtime guards can operate. Keep this narrow and prefer precise parsing for
-    new code.
-    eslint-disable-next-line @typescript-eslint/no-explicit-any
-*/
 'use server';
 
 import { config } from 'dotenv';
@@ -15,7 +5,6 @@ config();
 
 import {z} from 'zod';
 import admin from './firebase';
-import { isExecutiveProfile, isStartupProfile, isStartupNeed, toISODate, getTimestamp, getDate, parseExecutiveProfile, parseStartupProfile, parseStartupNeed } from './validators';
 import {executiveProfileFromResume} from '@/ai/flows/executive-profile-from-resume';
 import {rewriteJobDescriptionField as rewriteJobDescriptionFieldFlow} from '@/ai/flows/rewrite-job-description-field';
 import {rewriteExecutiveProfileField as rewriteExecutiveProfileFieldFlow} from '@/ai/flows/rewrite-executive-profile-field';
@@ -32,15 +21,6 @@ import { auth } from 'firebase-admin';
 import { cookies } from 'next/headers';
 import { analytics } from './firebase-client';
 import { logEvent } from 'firebase/analytics';
-// Re-export GitHub insights helper from a dedicated module so it can be tested independently
-import { fetchGithubInsights as __fetchGithubInsightsHelper } from './github-insights';
-import type { GithubInsightsState } from './github-insights';
-export type { GithubInsightsState } from './github-insights';
-
-// Server action wrapper: keep the server action declared in this server module
-export async function fetchGithubInsights(prevState: GithubInsightsState, input: { githubHandle?: string }): Promise<GithubInsightsState> {
-  return __fetchGithubInsightsHelper(prevState, input);
-}
 
 
 const parseResumeInputSchema = z.object({
@@ -118,26 +98,17 @@ export async function findMatchesForStartup(
 
   const db = admin.firestore();
 
-    const startupDoc = await db.collection('startup-needs').doc(startupId).get();
+  const startupDoc = await db.collection('startup-needs').doc(startupId).get();
   if (!startupDoc.exists) {
     return {status: 'error', message: 'Startup need not found.', matches: []};
   }
-    const startupRaw = startupDoc.data() || {};
-    const startupParsed = parseStartupNeed(startupRaw);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const startup = (startupParsed ?? (startupRaw as any)) as StartupNeeds;
+  const startup = startupDoc.data() as StartupNeeds;
 
-    const executiveDocs = await db.collection('executive-profiles').get();
+  const executiveDocs = await db.collection('executive-profiles').get();
   if (executiveDocs.empty) {
     return {status: 'error', message: 'No executives found to match against.', matches: []};
   }
-    const executives = executiveDocs.docs.map(doc => {
-        const raw = doc.data() || {};
-        const parsed = parseExecutiveProfile(raw);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const data = (parsed ?? (raw as any)) as ExecutiveProfile;
-        return { ...data, id: doc.id } as ExecutiveProfile;
-    });
+  const executives = executiveDocs.docs.map(doc => ({...doc.data(), id: doc.id} as ExecutiveProfile))
 
 
   const startupNeedsString = `
@@ -150,7 +121,7 @@ export async function findMatchesForStartup(
 
   try {
     const matchPromises = executives.map(async executive => {
-        const accomplishments = executive.keyAccomplishments.map((a: any) => a.value).join('; ');
+      const accomplishments = executive.keyAccomplishments.map(a => a.value).join('; ');
       const executiveProfileString = `Name: ${executive.name}. Expertise: ${executive.expertise}. Industry Experience: ${executive.industryExperience.join(', ')}. Availability: ${executive.availability}. Desired Compensation: ${executive.desiredCompensation}. Key Accomplishments: ${accomplishments}. GitHub Insights: ${executive.githubInsights || ''}`;
 
       const result = await matchExecutiveToStartup({
@@ -182,14 +153,11 @@ export async function findMatchesForStartup(
 export async function findMatchesForExecutive(executiveId: string): Promise<FindMatchesState> {
   const db = admin.firestore();
 
-    const executiveDoc = await db.collection('executive-profiles').doc(executiveId).get();
+  const executiveDoc = await db.collection('executive-profiles').doc(executiveId).get();
   if (!executiveDoc.exists) {
     return {status: 'error', message: 'Executive not found.', matches: []};
   }
-    const executiveRaw = executiveDoc.data() || {};
-    const executiveParsed = parseExecutiveProfile(executiveRaw);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const executive = (executiveParsed ?? (executiveRaw as any)) as ExecutiveProfile;
+  const executive = executiveDoc.data() as ExecutiveProfile;
 
   const savedOppsSnapshot = await db.collection('executive-profiles').doc(executiveId).collection('saved-opportunities').get();
   const savedOppIds = new Set(savedOppsSnapshot.docs.map(doc => doc.id));
@@ -211,10 +179,10 @@ export async function findMatchesForExecutive(executiveId: string): Promise<Find
     return {
       id: doc.id,
       ...data,
-    projectScope: data.roleSummary,
-    companyName: data.companyName,
-    createdAt: getTimestamp(data, 'createdAt') || new Date().toISOString(),
-    updatedAt: getTimestamp(data, 'updatedAt'),
+      projectScope: data.roleSummary,
+      companyName: data.companyName,
+      createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
+      updatedAt: data.updatedAt?.toDate()?.toISOString(),
       isSaved: savedOppIds.has(doc.id),
       isApplied: !!applicationInfo,
       applicationStatus: applicationInfo?.status,
@@ -349,32 +317,26 @@ export async function getUserDetails(
     if (role === 'executive') {
         const doc = await db.collection('executive-profiles').doc(uid).get();
         if (doc.exists) {
-            const raw = doc.data();
-            const parsed = parseExecutiveProfile(raw);
-            if (parsed) {
-                profile = {
-                    ...parsed,
-                    id: doc.id,
-                    updatedAt: getTimestamp(parsed, 'updatedAt') || undefined,
-                    createdAt: getTimestamp(parsed, 'createdAt') || undefined,
-                };
-                name = (profile as Partial<import('@/lib/types').ExecutiveProfile>)?.name || name;
-            }
+            const data = doc.data() as any;
+            profile = {
+                ...data,
+                id: doc.id,
+                updatedAt: data.updatedAt?.toDate().toISOString(),
+                createdAt: data.createdAt?.toDate().toISOString(),
+            };
+            name = (profile as ExecutiveProfile)?.name || name;
         }
     } else if (role === 'startup') {
         const doc = await db.collection('startup-profiles').doc(uid).get();
         if (doc.exists) {
-            const raw = doc.data();
-            const parsed = parseStartupProfile(raw);
-            if (parsed) {
-                profile = {
-                    ...parsed,
-                    id: doc.id,
-                    updatedAt: getTimestamp(parsed, 'updatedAt') || undefined,
-                    createdAt: getTimestamp(parsed, 'createdAt') || undefined,
-                };
-                name = (profile as Partial<import('@/lib/types').StartupProfile>)?.userName || name;
-            }
+            const data = doc.data() as any;
+            profile = {
+                ...data,
+                id: doc.id,
+                updatedAt: data.updatedAt?.toDate().toISOString(),
+                createdAt: data.createdAt?.toDate().toISOString(),
+            };
+            name = (profile as StartupProfile)?.userName || name;
         }
     }
 
@@ -382,14 +344,13 @@ export async function getUserDetails(
       return {role, name, email, profile};
     }
     return {role: null, name, email, profile: null};
-    } catch (error) {
-        const authErr = error as { code?: string } | undefined;
-        if (authErr?.code === 'auth/user-not-found') {
-                return null;
-        }
-        console.error('Error fetching user details:', error);
+  } catch (error) {
+    if ((error as any).code === 'auth/user-not-found') {
         return null;
     }
+    console.error('Error fetching user details:', error);
+    return null;
+  }
 }
 
 type RewriteState = {
@@ -619,19 +580,13 @@ export async function getStartupNeeds(creatorId: string): Promise<GetNeedsResult
         }
 
         const needs = needsSnapshot.docs.map(doc => {
-            const raw = doc.data();
-            const parsed = parseStartupNeed(raw);
-            // If parsing fails we fall back to the raw Firestore data. Use a local `any` cast
-            // so TypeScript allows property access; this is safe because we validate at runtime
-            // when saving and in the UI. eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const data = (parsed ?? (raw as any)) as StartupNeeds;
+            const data = doc.data();
 
             let expertise: string[] = [];
-            const reqExp = data.requiredExpertise as unknown;
-            if (Array.isArray(reqExp)) {
-                expertise = reqExp as string[];
-            } else if (typeof reqExp === 'string' && reqExp.trim()) {
-                expertise = (reqExp as string).split(',').map((s: string) => s.trim()).filter(Boolean);
+            if (Array.isArray(data.requiredExpertise)) {
+                expertise = data.requiredExpertise;
+            } else if (typeof data.requiredExpertise === 'string') {
+                expertise = data.requiredExpertise.split(',').map((s: string) => s.trim()).filter(Boolean);
             }
 
             return {
@@ -648,8 +603,8 @@ export async function getStartupNeeds(creatorId: string): Promise<GetNeedsResult
                 projectScope: data.roleSummary,
                 requiredExpertise: expertise,
                 status: data.status || 'active',
-                createdAt: getTimestamp(data, 'createdAt') || new Date().toISOString(),
-                updatedAt: getTimestamp(data, 'updatedAt'),
+                createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
+                updatedAt: data.updatedAt?.toDate().toISOString(),
                 locationPreference: data.locationPreference || '',
                 keyChallenges: data.keyChallenges || '',
                 links: data.links || {},
@@ -676,23 +631,19 @@ export async function getStartupNeed(startupNeedId: string, executiveId?: string
         if (!doc.exists) {
             return { status: 'error', message: 'Need not found.', need: null };
         }
-    const raw = doc.data() || {};
-    const parsed = parseStartupNeed(raw);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = (parsed ?? (raw as any)) as StartupNeeds;
+        const data = doc.data()!;
 
         let startupProfile: StartupProfile | null = null;
         if (data.creatorId) {
             const startupProfileDoc = await db.collection('startup-profiles').doc(data.creatorId).get();
             if (startupProfileDoc.exists) {
-                const rawProfile = startupProfileDoc.data() || {};
-                const profileParsed = parseStartupProfile(rawProfile);
-                const profileData = (profileParsed ?? (rawProfile as unknown)) as StartupProfile;
-                startupProfile = Object.assign({}, profileData as StartupProfile, {
+                const profileData = startupProfileDoc.data() as any;
+                startupProfile = {
                     id: startupProfileDoc.id,
-                    createdAt: getTimestamp(profileData, 'createdAt') || undefined,
-                    updatedAt: getTimestamp(profileData, 'updatedAt') || undefined,
-                }) as StartupProfile;
+                    ...profileData,
+                    createdAt: profileData.createdAt?.toDate().toISOString(),
+                    updatedAt: profileData.updatedAt?.toDate().toISOString(),
+                } as StartupProfile;
             }
         }
 
@@ -724,8 +675,8 @@ export async function getStartupNeed(startupNeedId: string, executiveId?: string
             projectScope: data.roleSummary,
             requiredExpertise: data.requiredExpertise, // This will be an array for the form
             status: data.status || 'active',
-            createdAt: getTimestamp(data, 'createdAt') || new Date().toISOString(),
-            updatedAt: getTimestamp(data, 'updatedAt') || undefined,
+            createdAt: data.createdAt?.toDate().toISOString(),
+            updatedAt: data.updatedAt?.toDate().toISOString(),
             locationPreference: data.locationPreference,
             startupProfile: startupProfile,
             isApplied,
@@ -835,17 +786,15 @@ export async function getExecutiveProfile(executiveId: string): Promise<GetExecu
             return { status: 'error', message: 'No profile found.', profile: null, code: 'not-found' };
         }
 
-            const raw = doc.data();
-            const parsed = parseExecutiveProfile(raw) || {};
+        const data = doc.data() as any;
 
-        const safeData = parsed;
         const serializableProfile = {
-            ...safeData,
+            ...data,
             id: doc.id,
-            keyAccomplishments: (safeData as any).keyAccomplishments || [],
-            industryExperience: (safeData as any).industryExperience || [],
-            updatedAt: getTimestamp(safeData, 'updatedAt') || undefined,
-            createdAt: getTimestamp(safeData, 'createdAt') || undefined,
+            keyAccomplishments: data.keyAccomplishments || [],
+            industryExperience: data.industryExperience || [],
+            updatedAt: data.updatedAt?.toDate().toISOString() || undefined,
+            createdAt: data.createdAt?.toDate().toISOString() || undefined,
         }
 
 
@@ -868,21 +817,19 @@ export async function getExecutiveProfileById(startupId: string, executiveId: st
             return { status: 'error', message: 'No profile found for this executive.', profile: null, code: 'not-found' };
         }
 
-    const raw = doc.data();
-    const parsed = parseExecutiveProfile(raw) || {};
+        const data = doc.data() as any;
 
         const shortlistRef = db.collection('startup-profiles').doc(startupId).collection('shortlisted-executives').doc(executiveId);
         const shortlistDoc = await shortlistRef.get();
         const isShortlisted = shortlistDoc.exists;
 
-        const safeData2 = parsed || {};
         const serializableProfile = {
-            ...safeData2,
+            ...data,
             id: doc.id,
-            keyAccomplishments: (safeData2 as any).keyAccomplishments || [],
-            industryExperience: (safeData2 as any).industryExperience || [],
-            updatedAt: getTimestamp(safeData2, 'updatedAt') || undefined,
-            createdAt: getTimestamp(safeData2, 'createdAt') || undefined,
+            keyAccomplishments: data.keyAccomplishments || [],
+            industryExperience: data.industryExperience || [],
+            updatedAt: data.updatedAt?.toDate().toISOString() || undefined,
+            createdAt: data.createdAt?.toDate().toISOString() || undefined,
             isShortlisted: isShortlisted,
         }
 
@@ -918,18 +865,14 @@ export async function getAllExecutiveProfiles(startupId: string): Promise<GetExe
         const shortlistedIds = new Set(shortlistSnapshot.docs.map(doc => doc.id));
 
         const profilesPromises = profilesSnapshot.docs.map(async (doc) => {
-            const raw = doc.data();
-            const data = parseExecutiveProfile(raw) || (raw as ExecutiveProfile);
+            const data = doc.data() as ExecutiveProfile;
 
             let highestMatchScore = 0;
             if (!startupNeedsSnapshot.empty) {
                 const matchScores = await Promise.all(startupNeedsSnapshot.docs.map(async (needDoc) => {
-                    const startupNeedRaw = needDoc.data() || {};
-                    const startupNeedParsed = parseStartupNeed(startupNeedRaw);
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const startupNeed = (startupNeedParsed ?? (startupNeedRaw as any)) as StartupNeeds;
+                    const startupNeed = needDoc.data() as StartupNeeds;
 
-                    const accomplishments = data.keyAccomplishments?.map((a: any) => a.value).join('; ') || '';
+                    const accomplishments = data.keyAccomplishments?.map(a => a.value).join('; ') || '';
                     const executiveProfileString = `Name: ${data.name}. Expertise: ${data.expertise}. Industry Experience: ${data.industryExperience?.join(', ') || ''}. Availability: ${data.availability}. Desired Compensation: ${data.desiredCompensation}. Key Accomplishments: ${accomplishments}. GitHub Insights: ${data.githubInsights || ''}`;
 
                     const startupNeedsString = `
@@ -954,8 +897,8 @@ export async function getAllExecutiveProfiles(startupId: string): Promise<GetExe
                 id: doc.id,
                 keyAccomplishments: data.keyAccomplishments || [],
                 industryExperience: data.industryExperience || [],
-                updatedAt: getTimestamp(data, 'updatedAt') || undefined,
-                createdAt: getTimestamp(data, 'createdAt') || undefined,
+                updatedAt: (data.updatedAt as any)?.toDate().toISOString() || undefined,
+                createdAt: (data.createdAt as any)?.toDate().toISOString() || undefined,
                 isShortlisted: shortlistedIds.has(doc.id),
                 matchScore: highestMatchScore,
             } as ExecutiveProfile;
@@ -1027,15 +970,14 @@ export async function getStartupProfile(startupId: string): Promise<GetStartupPr
             return { status: 'error', message: 'No profile found.', profile: null, code: 'not-found' };
         }
 
-    const raw = doc.data() || {};
-    const parsed = parseStartupProfile(raw);
-    const data = (parsed ?? (raw as unknown)) as StartupProfile;
+        const data = doc.data() as any;
 
-        const serializableProfile = Object.assign({}, data, {
+        const serializableProfile = {
+            ...data,
             id: doc.id,
-            updatedAt: getTimestamp(data, 'updatedAt') || undefined,
-            createdAt: getTimestamp(data, 'createdAt') || undefined,
-        });
+            updatedAt: data.updatedAt?.toDate().toISOString() || undefined,
+            createdAt: data.createdAt?.toDate().toISOString() || undefined,
+        }
 
         return { status: 'success', message: 'Profile fetched.', profile: serializableProfile };
 
@@ -1104,8 +1046,8 @@ export async function getSavedOpportunities(executiveId: string): Promise<FindMa
             isApplied: appliedOppIds.has(doc.id),
             projectScope: data.roleSummary,
             companyName: data.companyName,
-            createdAt: getTimestamp(data, 'createdAt') || new Date().toISOString(),
-            updatedAt: getTimestamp(data, 'updatedAt'),
+            createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
+            updatedAt: data.updatedAt?.toDate().toISOString(),
         } as StartupNeeds & { isSaved?: boolean; isApplied?: boolean };
     });
 
@@ -1183,17 +1125,17 @@ export async function getApplications(executiveId: string): Promise<{ status: 's
                 ...data,
                 projectScope: data.roleSummary,
                 requiredExpertise: Array.isArray(data.requiredExpertise) ? data.requiredExpertise.join(', ') : data.requiredExpertise,
-                createdAt: getTimestamp(data, 'createdAt') || new Date().toISOString(),
-                updatedAt: getTimestamp(data, 'updatedAt'),
+                createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
+                updatedAt: data.updatedAt?.toDate().toISOString(),
             } as StartupNeeds);
         });
 
         const applications: Application[] = appsSnapshot.docs.map(doc => {
-            const appData = doc.data() || {};
+            const appData = doc.data();
             return {
                 id: doc.id,
                 status: appData.status,
-                appliedAt: getTimestamp(appData, 'appliedAt') || new Date().toISOString(),
+                appliedAt: appData.appliedAt.toDate().toISOString(),
                 startupNeed: needsMap.get(appData.startupNeedId)!,
             };
         }).filter(app => app.startupNeed); // Filter out any applications where the need was deleted
@@ -1221,10 +1163,7 @@ export async function getExecutiveDashboardStats(executiveId: string): Promise<{
         if (!executiveDoc.exists) {
             return { status: 'error', message: 'Executive not found.', stats: null };
         }
-    const executiveRaw = executiveDoc.data() || {};
-    const executiveParsed = parseExecutiveProfile(executiveRaw);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const executive = (executiveParsed ?? (executiveRaw as any)) as ExecutiveProfile;
+        const executive = executiveDoc.data() as ExecutiveProfile;
 
         // Stats
         const allNeedsSnapshot = await db.collection('startup-needs').where('status', '==', 'active').get();
@@ -1238,7 +1177,7 @@ export async function getExecutiveDashboardStats(executiveId: string): Promise<{
         const savedOppsSnapshot = await db.collection('executive-profiles').doc(executiveId).collection('saved-opportunities').get();
         const savedOppIds = new Set(savedOppsSnapshot.docs.map(doc => doc.id));
 
-    const profileUpdatedAt = getDate(executive, 'updatedAt');
+        const profileUpdatedAt = (executive as any).updatedAt?.toDate();
         let isProfileStale = true;
         let profileUpdatedAtString = null;
         if (profileUpdatedAt) {
@@ -1265,15 +1204,15 @@ export async function getExecutiveDashboardStats(executiveId: string): Promise<{
             .map(doc => {
                 const data = doc.data();
                 return {
-                        id: doc.id,
-                        ...data,
-                        roleTitle: data.roleTitle,
-                        projectScope: data.roleSummary,
-                        createdAt: getTimestamp(data, 'createdAt'),
-                        updatedAt: getTimestamp(data, 'updatedAt'),
-                        isApplied: appliedOppIds.has(doc.id),
-                        isSaved: savedOppIds.has(doc.id),
-                    } as StartupNeeds & { isApplied?: boolean, isSaved?: boolean };
+                    id: doc.id,
+                    ...data,
+                    roleTitle: data.roleTitle,
+                    projectScope: data.roleSummary,
+                    createdAt: data.createdAt?.toDate().toISOString(),
+                    updatedAt: data.updatedAt?.toDate().toISOString(),
+                    isApplied: appliedOppIds.has(doc.id),
+                    isSaved: savedOppIds.has(doc.id),
+                } as StartupNeeds & { isApplied?: boolean, isSaved?: boolean };
             });
 
         const accomplishments = executive.keyAccomplishments?.map(a => a.value).join('; ') || '';
@@ -1381,23 +1320,23 @@ export async function getApplicantsForStartup(startupId: string): Promise<{ stat
             return {
                 id: doc.id,
                 status: appData.status,
-                appliedAt: getTimestamp(appData, 'appliedAt') || new Date().toISOString(),
+                appliedAt: appData.appliedAt.toDate().toISOString(),
                 matchScore: matchResult.matchScore,
                 executive: {
                     ...executive,
                     isShortlisted: shortlistedIds.has(executive.id),
                     photoUrl: executive.photoUrl || 'https://placehold.co/100x100.png',
                     expertise: executive.expertise || 'No expertise summary provided.',
-                    createdAt: getTimestamp(executive, 'createdAt'),
-                    updatedAt: getTimestamp(executive, 'updatedAt'),
+                    createdAt: (executive.createdAt as any)?.toDate().toISOString(),
+                    updatedAt: (executive.updatedAt as any)?.toDate().toISOString(),
                 },
                 startupNeed: {
                     ...startupNeed,
                      roleTitle: startupNeed.roleTitle || "Untitled Role",
                      roleSummary: startupNeed.roleSummary || "",
                      requiredExpertise: Array.isArray(startupNeed.requiredExpertise) ? startupNeed.requiredExpertise.join(', ') : startupNeed.requiredExpertise,
-                     createdAt: getTimestamp(startupNeed, 'createdAt'),
-                     updatedAt: getTimestamp(startupNeed, 'updatedAt'),
+                     createdAt: (startupNeed.createdAt as any)?.toDate().toISOString(),
+                     updatedAt: (startupNeed.updatedAt as any)?.toDate().toISOString(),
                 }
             };
         });
@@ -1408,51 +1347,622 @@ export async function getApplicantsForStartup(startupId: string): Promise<{ stat
         return { status: 'success', message: 'Applications fetched successfully.', applications };
 
     } catch (error) {
-        console.error('Error fetching applications for startup:', error);
+        console.error('Error fetching applications:', error);
         const message = error instanceof Error ? error.message : 'An unknown error occurred.';
         return { status: 'error', message, applications: [] };
     }
 }
 
 
-export async function updateApplicationStatus(
-  input: {
-    applicationId: string;
-    status: ApplicationStatus;
-    sendMessage: boolean;
-    messageContent?: string;
-    startupId?: string;
-    executiveId?: string;
-  }
-): Promise<{ status: 'success' | 'error', message: string }> {
-  const { applicationId, status, sendMessage, messageContent, startupId, executiveId } = input;
-  const db = admin.firestore();
-  const applicationRef = db.collection('applications').doc(applicationId);
 
-  try {
-    if (sendMessage && messageContent && startupId && executiveId) {
-        await startConversation({
-            initiator: 'startup',
-            startupId: startupId,
-            executiveId: executiveId,
-            message: messageContent,
+
+export async function getExecutiveDashboardStats(executiveId: string): Promise<{ status: 'success' | 'error', message: string, stats: ExecutiveDashboardStats | null }> {
+    const db = admin.firestore();
+    try {
+        const [executiveDoc, conversations] = await Promise.all([
+            db.collection('executive-profiles').doc(executiveId).get(),
+            getConversationsForUser(executiveId)
+        ]);
+
+        if (!executiveDoc.exists) {
+            return { status: 'error', message: 'Executive not found.', stats: null };
+        }
+        const executive = executiveDoc.data() as ExecutiveProfile;
+
+        // Stats
+        const allNeedsSnapshot = await db.collection('startup-needs').where('status', '==', 'active').get();
+        const matchedOpportunities = allNeedsSnapshot.size;
+
+        const applicationsSnapshot = await db.collection('applications').where('executiveId', '==', executiveId).get();
+        const totalApplications = applicationsSnapshot.size;
+        const awaitingResponse = applicationsSnapshot.docs.filter(doc => ['applied', 'in-review'].includes(doc.data().status)).length;
+        const appliedOppIds = new Set(applicationsSnapshot.docs.map(doc => doc.data().startupNeedId));
+
+        const savedOppsSnapshot = await db.collection('executive-profiles').doc(executiveId).collection('saved-opportunities').get();
+        const savedOppIds = new Set(savedOppsSnapshot.docs.map(doc => doc.id));
+
+        const profileUpdatedAt = (executive as any).updatedAt?.toDate();
+        let isProfileStale = true;
+        let profileUpdatedAtString = null;
+        if (profileUpdatedAt) {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            isProfileStale = profileUpdatedAt < thirtyDaysAgo;
+            profileUpdatedAtString = profileUpdatedAt.toISOString();
+        }
+
+        const timesShortlistedSnapshot = await db.collectionGroup('shortlisted-executives').get();
+        const timesShortlisted = timesShortlistedSnapshot.docs.filter(doc => doc.id === executiveId).length;
+
+
+        // Recent Opportunities
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        const allRecentNeedsSnapshot = await db.collection('startup-needs')
+            .where('updatedAt', '>=', admin.firestore.Timestamp.fromDate(sevenDaysAgo))
+            .get();
+
+        const recentNeedsData = allRecentNeedsSnapshot.docs
+            .filter(doc => doc.data().status === 'active') // Filter in code
+            .map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    roleTitle: data.roleTitle,
+                    projectScope: data.roleSummary,
+                    createdAt: data.createdAt?.toDate().toISOString(),
+                    updatedAt: data.updatedAt?.toDate().toISOString(),
+                    isApplied: appliedOppIds.has(doc.id),
+                    isSaved: savedOppIds.has(doc.id),
+                } as StartupNeeds & { isApplied?: boolean, isSaved?: boolean };
+            });
+
+        const accomplishments = executive.keyAccomplishments?.map(a => a.value).join('; ') || '';
+        const executiveProfileString = `Name: ${executive.name}. Expertise: ${executive.expertise}. Industry Experience: ${executive.industryExperience?.join(', ') || ''}. Availability: ${executive.availability}. Desired Compensation: ${executive.desiredCompensation}. Key Accomplishments: ${accomplishments}. GitHub Insights: ${executive.githubInsights || ''}`;
+
+        const matchPromises = recentNeedsData.map(async startup => {
+            const startupNeedsString = `Company: ${startup.companyName}, Project Scope: ${startup.roleSummary}, Budget: ${startup.budget}, Required Expertise: ${Array.isArray(startup.requiredExpertise) ? startup.requiredExpertise.join(', ') : startup.requiredExpertise}, Company Stage: ${startup.companyStage}.`;
+            const result = await matchExecutiveToStartup({ executiveProfile: executiveProfileString, startupNeeds: startupNeedsString });
+            return { ...startup, matchScore: result.matchScore, rationale: result.rationale, recommendation: result.recommendation };
         });
+
+        const recentMatches = await Promise.all(matchPromises);
+        const sortedMatches = recentMatches.sort((a, b) => {
+            const aDate = new Date(a.updatedAt || a.createdAt);
+            const bDate = new Date(b.updatedAt || b.createdAt);
+            if (bDate.getTime() !== aDate.getTime()) {
+                return bDate.getTime() - aDate.getTime();
+            }
+            return b.matchScore - a.matchScore;
+        }).slice(0, 6);
+
+        const stats: ExecutiveDashboardStats = {
+            matchedOpportunities,
+            totalApplications,
+            awaitingResponse,
+            isProfileStale,
+            profileUpdatedAt: profileUpdatedAtString,
+            recentOpportunities: sortedMatches,
+            timesShortlisted,
+            recentConversations: conversations.conversations?.slice(0, 3) || [],
+        };
+
+        return { status: 'success', message: 'Stats fetched successfully.', stats };
+
+    } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+        const message = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return { status: 'error', message, stats: null };
     }
+}
 
-    await applicationRef.update({
-      status: status,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+export async function getApplicantsForStartup(startupId: string): Promise<{ status: 'success' | 'error', message: string, applications: ApplicationWithExecutive[] }> {
+    const db = admin.firestore();
 
-    revalidatePath('/startups/candidates');
-    revalidatePath('/startups/applicants');
-    revalidatePath('/startups/dashboard');
-    return { status: 'success', message: 'Application status updated.' };
-  } catch (error) {
-    console.error('Error updating application status:', error);
-    const message = error instanceof Error ? error.message : 'An unknown error occurred.';
-    return { status: 'error', message };
-  }
+    try {
+        const needsSnapshot = await db.collection('startup-needs').where('creatorId', '==', startupId).get();
+        if (needsSnapshot.empty) {
+            return { status: 'success', message: 'No needs created by this startup.', applications: [] };
+        }
+        const needIds = needsSnapshot.docs.map(doc => doc.id);
+
+        const appsSnapshot = await db.collection('applications')
+            .where('startupNeedId', 'in', needIds)
+            .orderBy('appliedAt', 'desc')
+            .get();
+
+        if (appsSnapshot.empty) {
+            return { status: 'success', message: 'No applications found for your roles.', applications: [] };
+        }
+
+        const executiveIds = [...new Set(appsSnapshot.docs.map(doc => doc.data().executiveId))];
+        const executivesSnapshot = await db.collection('executive-profiles').where(admin.firestore.FieldPath.documentId(), 'in', executiveIds).get();
+        const executivesMap = new Map<string, ExecutiveProfile>();
+        executivesSnapshot.forEach(doc => {
+            const execData = doc.data()
+            executivesMap.set(doc.id, {
+                id: doc.id,
+                ...execData,
+                keyAccomplishments: execData.keyAccomplishments || [],
+                industryExperience: execData.industryExperience || [],
+             } as ExecutiveProfile);
+        });
+
+        const needsMap = new Map<string, StartupNeeds>();
+        needsSnapshot.docs.forEach(doc => {
+            needsMap.set(doc.id, { id: doc.id, ...doc.data() } as StartupNeeds);
+        });
+
+        const shortlistSnapshot = await db.collection('startup-profiles').doc(startupId).collection('shortlisted-executives').get();
+        const shortlistedIds = new Set(shortlistSnapshot.docs.map(doc => doc.id));
+
+        const applicationsPromises = appsSnapshot.docs.map(async (doc) => {
+            const appData = doc.data();
+            const executive = executivesMap.get(appData.executiveId);
+            const startupNeed = needsMap.get(appData.startupNeedId);
+
+            if (!executive || !startupNeed) return null;
+
+            const accomplishments = executive.keyAccomplishments?.map(a => a.value).join('; ') || '';
+            const executiveProfileString = `Name: ${executive.name}. Expertise: ${executive.expertise}. Industry Experience: ${executive.industryExperience?.join(', ') || ''}. Availability: ${executive.availability}. Desired Compensation: ${executive.desiredCompensation}. Key Accomplishments: ${accomplishments}. GitHub Insights: ${executive.githubInsights || ''}`;
+
+            const startupNeedsString = `
+                Project Scope: ${startupNeed.roleSummary}.
+                Budget: ${startupNeed.budget}.
+                Required Expertise: ${Array.isArray(startupNeed.requiredExpertise) ? startupNeed.requiredExpertise.join(', ') : startupNeed.requiredExpertise}.
+                Company Stage: ${startupNeed.companyStage}.
+                Key Challenges & Dealbreakers: ${startupNeed.keyChallenges || 'Not specified'}.
+            `;
+
+            const matchResult = await matchExecutiveToStartup({
+                executiveProfile: executiveProfileString,
+                startupNeeds: startupNeedsString,
+            });
+
+            return {
+                id: doc.id,
+                status: appData.status,
+                appliedAt: appData.appliedAt.toDate().toISOString(),
+                matchScore: matchResult.matchScore,
+                executive: {
+                    ...executive,
+                    isShortlisted: shortlistedIds.has(executive.id),
+                    photoUrl: executive.photoUrl || 'https://placehold.co/100x100.png',
+                    expertise: executive.expertise || 'No expertise summary provided.',
+                    createdAt: (executive.createdAt as any)?.toDate().toISOString(),
+                    updatedAt: (executive.updatedAt as any)?.toDate().toISOString(),
+                },
+                startupNeed: {
+                    ...startupNeed,
+                     roleTitle: startupNeed.roleTitle || "Untitled Role",
+                     roleSummary: startupNeed.roleSummary || "",
+                     requiredExpertise: Array.isArray(startupNeed.requiredExpertise) ? startupNeed.requiredExpertise.join(', ') : startupNeed.requiredExpertise,
+                     createdAt: (startupNeed.createdAt as any)?.toDate().toISOString(),
+                     updatedAt: (startupNeed.updatedAt as any)?.toDate().toISOString(),
+                }
+            };
+        });
+
+        const applications = (await Promise.all(applicationsPromises))
+            .filter(Boolean) as ApplicationWithExecutive[];
+
+        return { status: 'success', message: 'Applications fetched successfully.', applications };
+
+    } catch (error) {
+        console.error('Error fetching applications:', error);
+        const message = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return { status: 'error', message, applications: [] };
+    }
+}
+
+
+
+
+export async function getExecutiveDashboardStats(executiveId: string): Promise<{ status: 'success' | 'error', message: string, stats: ExecutiveDashboardStats | null }> {
+    const db = admin.firestore();
+    try {
+        const [executiveDoc, conversations] = await Promise.all([
+            db.collection('executive-profiles').doc(executiveId).get(),
+            getConversationsForUser(executiveId)
+        ]);
+
+        if (!executiveDoc.exists) {
+            return { status: 'error', message: 'Executive not found.', stats: null };
+        }
+        const executive = executiveDoc.data() as ExecutiveProfile;
+
+        // Stats
+        const allNeedsSnapshot = await db.collection('startup-needs').where('status', '==', 'active').get();
+        const matchedOpportunities = allNeedsSnapshot.size;
+
+        const applicationsSnapshot = await db.collection('applications').where('executiveId', '==', executiveId).get();
+        const totalApplications = applicationsSnapshot.size;
+        const awaitingResponse = applicationsSnapshot.docs.filter(doc => ['applied', 'in-review'].includes(doc.data().status)).length;
+        const appliedOppIds = new Set(applicationsSnapshot.docs.map(doc => doc.data().startupNeedId));
+
+        const savedOppsSnapshot = await db.collection('executive-profiles').doc(executiveId).collection('saved-opportunities').get();
+        const savedOppIds = new Set(savedOppsSnapshot.docs.map(doc => doc.id));
+
+        const profileUpdatedAt = (executive as any).updatedAt?.toDate();
+        let isProfileStale = true;
+        let profileUpdatedAtString = null;
+        if (profileUpdatedAt) {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            isProfileStale = profileUpdatedAt < thirtyDaysAgo;
+            profileUpdatedAtString = profileUpdatedAt.toISOString();
+        }
+
+        const timesShortlistedSnapshot = await db.collectionGroup('shortlisted-executives').get();
+        const timesShortlisted = timesShortlistedSnapshot.docs.filter(doc => doc.id === executiveId).length;
+
+
+        // Recent Opportunities
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        const allRecentNeedsSnapshot = await db.collection('startup-needs')
+            .where('updatedAt', '>=', admin.firestore.Timestamp.fromDate(sevenDaysAgo))
+            .get();
+
+        const recentNeedsData = allRecentNeedsSnapshot.docs
+            .filter(doc => doc.data().status === 'active') // Filter in code
+            .map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    roleTitle: data.roleTitle,
+                    projectScope: data.roleSummary,
+                    createdAt: data.createdAt?.toDate().toISOString(),
+                    updatedAt: data.updatedAt?.toDate().toISOString(),
+                    isApplied: appliedOppIds.has(doc.id),
+                    isSaved: savedOppIds.has(doc.id),
+                } as StartupNeeds & { isApplied?: boolean, isSaved?: boolean };
+            });
+
+        const accomplishments = executive.keyAccomplishments?.map(a => a.value).join('; ') || '';
+        const executiveProfileString = `Name: ${executive.name}. Expertise: ${executive.expertise}. Industry Experience: ${executive.industryExperience?.join(', ') || ''}. Availability: ${executive.availability}. Desired Compensation: ${executive.desiredCompensation}. Key Accomplishments: ${accomplishments}. GitHub Insights: ${executive.githubInsights || ''}`;
+
+        const matchPromises = recentNeedsData.map(async startup => {
+            const startupNeedsString = `Company: ${startup.companyName}, Project Scope: ${startup.roleSummary}, Budget: ${startup.budget}, Required Expertise: ${Array.isArray(startup.requiredExpertise) ? startup.requiredExpertise.join(', ') : startup.requiredExpertise}, Company Stage: ${startup.companyStage}.`;
+            const result = await matchExecutiveToStartup({ executiveProfile: executiveProfileString, startupNeeds: startupNeedsString });
+            return { ...startup, matchScore: result.matchScore, rationale: result.rationale, recommendation: result.recommendation };
+        });
+
+        const recentMatches = await Promise.all(matchPromises);
+        const sortedMatches = recentMatches.sort((a, b) => {
+            const aDate = new Date(a.updatedAt || a.createdAt);
+            const bDate = new Date(b.updatedAt || b.createdAt);
+            if (bDate.getTime() !== aDate.getTime()) {
+                return bDate.getTime() - aDate.getTime();
+            }
+            return b.matchScore - a.matchScore;
+        }).slice(0, 6);
+
+        const stats: ExecutiveDashboardStats = {
+            matchedOpportunities,
+            totalApplications,
+            awaitingResponse,
+            isProfileStale,
+            profileUpdatedAt: profileUpdatedAtString,
+            recentOpportunities: sortedMatches,
+            timesShortlisted,
+            recentConversations: conversations.conversations?.slice(0, 3) || [],
+        };
+
+        return { status: 'success', message: 'Stats fetched successfully.', stats };
+
+    } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+        const message = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return { status: 'error', message, stats: null };
+    }
+}
+
+export async function getApplicantsForStartup(startupId: string): Promise<{ status: 'success' | 'error', message: string, applications: ApplicationWithExecutive[] }> {
+    const db = admin.firestore();
+
+    try {
+        const needsSnapshot = await db.collection('startup-needs').where('creatorId', '==', startupId).get();
+        if (needsSnapshot.empty) {
+            return { status: 'success', message: 'No needs created by this startup.', applications: [] };
+        }
+        const needIds = needsSnapshot.docs.map(doc => doc.id);
+
+        const appsSnapshot = await db.collection('applications')
+            .where('startupNeedId', 'in', needIds)
+            .orderBy('appliedAt', 'desc')
+            .get();
+
+        if (appsSnapshot.empty) {
+            return { status: 'success', message: 'No applications found for your roles.', applications: [] };
+        }
+
+        const executiveIds = [...new Set(appsSnapshot.docs.map(doc => doc.data().executiveId))];
+        const executivesSnapshot = await db.collection('executive-profiles').where(admin.firestore.FieldPath.documentId(), 'in', executiveIds).get();
+        const executivesMap = new Map<string, ExecutiveProfile>();
+        executivesSnapshot.forEach(doc => {
+            const execData = doc.data()
+            executivesMap.set(doc.id, {
+                id: doc.id,
+                ...execData,
+                keyAccomplishments: execData.keyAccomplishments || [],
+                industryExperience: execData.industryExperience || [],
+             } as ExecutiveProfile);
+        });
+
+        const needsMap = new Map<string, StartupNeeds>();
+        needsSnapshot.docs.forEach(doc => {
+            needsMap.set(doc.id, { id: doc.id, ...doc.data() } as StartupNeeds);
+        });
+
+        const shortlistSnapshot = await db.collection('startup-profiles').doc(startupId).collection('shortlisted-executives').get();
+        const shortlistedIds = new Set(shortlistSnapshot.docs.map(doc => doc.id));
+
+        const applicationsPromises = appsSnapshot.docs.map(async (doc) => {
+            const appData = doc.data();
+            const executive = executivesMap.get(appData.executiveId);
+            const startupNeed = needsMap.get(appData.startupNeedId);
+
+            if (!executive || !startupNeed) return null;
+
+            const accomplishments = executive.keyAccomplishments?.map(a => a.value).join('; ') || '';
+            const executiveProfileString = `Name: ${executive.name}. Expertise: ${executive.expertise}. Industry Experience: ${executive.industryExperience?.join(', ') || ''}. Availability: ${executive.availability}. Desired Compensation: ${executive.desiredCompensation}. Key Accomplishments: ${accomplishments}. GitHub Insights: ${executive.githubInsights || ''}`;
+
+            const startupNeedsString = `
+                Project Scope: ${startupNeed.roleSummary}.
+                Budget: ${startupNeed.budget}.
+                Required Expertise: ${Array.isArray(startupNeed.requiredExpertise) ? startupNeed.requiredExpertise.join(', ') : startupNeed.requiredExpertise}.
+                Company Stage: ${startupNeed.companyStage}.
+                Key Challenges & Dealbreakers: ${startupNeed.keyChallenges || 'Not specified'}.
+            `;
+
+            const matchResult = await matchExecutiveToStartup({
+                executiveProfile: executiveProfileString,
+                startupNeeds: startupNeedsString,
+            });
+
+            return {
+                id: doc.id,
+                status: appData.status,
+                appliedAt: appData.appliedAt.toDate().toISOString(),
+                matchScore: matchResult.matchScore,
+                executive: {
+                    ...executive,
+                    isShortlisted: shortlistedIds.has(executive.id),
+                    photoUrl: executive.photoUrl || 'https://placehold.co/100x100.png',
+                    expertise: executive.expertise || 'No expertise summary provided.',
+                    createdAt: (executive.createdAt as any)?.toDate().toISOString(),
+                    updatedAt: (executive.updatedAt as any)?.toDate().toISOString(),
+                },
+                startupNeed: {
+                    ...startupNeed,
+                     roleTitle: startupNeed.roleTitle || "Untitled Role",
+                     roleSummary: startupNeed.roleSummary || "",
+                     requiredExpertise: Array.isArray(startupNeed.requiredExpertise) ? startupNeed.requiredExpertise.join(', ') : startupNeed.requiredExpertise,
+                     createdAt: (startupNeed.createdAt as any)?.toDate().toISOString(),
+                     updatedAt: (startupNeed.updatedAt as any)?.toDate().toISOString(),
+                }
+            };
+        });
+
+        const applications = (await Promise.all(applicationsPromises))
+            .filter(Boolean) as ApplicationWithExecutive[];
+
+        return { status: 'success', message: 'Applications fetched successfully.', applications };
+
+    } catch (error) {
+        console.error('Error fetching applications:', error);
+        const message = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return { status: 'error', message, applications: [] };
+    }
+}
+
+
+
+
+export async function getExecutiveDashboardStats(executiveId: string): Promise<{ status: 'success' | 'error', message: string, stats: ExecutiveDashboardStats | null }> {
+    const db = admin.firestore();
+    try {
+        const [executiveDoc, conversations] = await Promise.all([
+            db.collection('executive-profiles').doc(executiveId).get(),
+            getConversationsForUser(executiveId)
+        ]);
+
+        if (!executiveDoc.exists) {
+            return { status: 'error', message: 'Executive not found.', stats: null };
+        }
+        const executive = executiveDoc.data() as ExecutiveProfile;
+
+        // Stats
+        const allNeedsSnapshot = await db.collection('startup-needs').where('status', '==', 'active').get();
+        const matchedOpportunities = allNeedsSnapshot.size;
+
+        const applicationsSnapshot = await db.collection('applications').where('executiveId', '==', executiveId).get();
+        const totalApplications = applicationsSnapshot.size;
+        const awaitingResponse = applicationsSnapshot.docs.filter(doc => ['applied', 'in-review'].includes(doc.data().status)).length;
+        const appliedOppIds = new Set(applicationsSnapshot.docs.map(doc => doc.data().startupNeedId));
+
+        const savedOppsSnapshot = await db.collection('executive-profiles').doc(executiveId).collection('saved-opportunities').get();
+        const savedOppIds = new Set(savedOppsSnapshot.docs.map(doc => doc.id));
+
+        const profileUpdatedAt = (executive as any).updatedAt?.toDate();
+        let isProfileStale = true;
+        let profileUpdatedAtString = null;
+        if (profileUpdatedAt) {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            isProfileStale = profileUpdatedAt < thirtyDaysAgo;
+            profileUpdatedAtString = profileUpdatedAt.toISOString();
+        }
+
+        const timesShortlistedSnapshot = await db.collectionGroup('shortlisted-executives').get();
+        const timesShortlisted = timesShortlistedSnapshot.docs.filter(doc => doc.id === executiveId).length;
+
+
+        // Recent Opportunities
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        const allRecentNeedsSnapshot = await db.collection('startup-needs')
+            .where('updatedAt', '>=', admin.firestore.Timestamp.fromDate(sevenDaysAgo))
+            .get();
+
+        const recentNeedsData = allRecentNeedsSnapshot.docs
+            .filter(doc => doc.data().status === 'active') // Filter in code
+            .map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    roleTitle: data.roleTitle,
+                    projectScope: data.roleSummary,
+                    createdAt: data.createdAt?.toDate().toISOString(),
+                    updatedAt: data.updatedAt?.toDate().toISOString(),
+                    isApplied: appliedOppIds.has(doc.id),
+                    isSaved: savedOppIds.has(doc.id),
+                } as StartupNeeds & { isApplied?: boolean, isSaved?: boolean };
+            });
+
+        const accomplishments = executive.keyAccomplishments?.map(a => a.value).join('; ') || '';
+        const executiveProfileString = `Name: ${executive.name}. Expertise: ${executive.expertise}. Industry Experience: ${executive.industryExperience?.join(', ') || ''}. Availability: ${executive.availability}. Desired Compensation: ${executive.desiredCompensation}. Key Accomplishments: ${accomplishments}. GitHub Insights: ${executive.githubInsights || ''}`;
+
+        const matchPromises = recentNeedsData.map(async startup => {
+            const startupNeedsString = `Company: ${startup.companyName}, Project Scope: ${startup.roleSummary}, Budget: ${startup.budget}, Required Expertise: ${Array.isArray(startup.requiredExpertise) ? startup.requiredExpertise.join(', ') : startup.requiredExpertise}, Company Stage: ${startup.companyStage}.`;
+            const result = await matchExecutiveToStartup({ executiveProfile: executiveProfileString, startupNeeds: startupNeedsString });
+            return { ...startup, matchScore: result.matchScore, rationale: result.rationale, recommendation: result.recommendation };
+        });
+
+        const recentMatches = await Promise.all(matchPromises);
+        const sortedMatches = recentMatches.sort((a, b) => {
+            const aDate = new Date(a.updatedAt || a.createdAt);
+            const bDate = new Date(b.updatedAt || b.createdAt);
+            if (bDate.getTime() !== aDate.getTime()) {
+                return bDate.getTime() - aDate.getTime();
+            }
+            return b.matchScore - a.matchScore;
+        }).slice(0, 6);
+
+        const stats: ExecutiveDashboardStats = {
+            matchedOpportunities,
+            totalApplications,
+            awaitingResponse,
+            isProfileStale,
+            profileUpdatedAt: profileUpdatedAtString,
+            recentOpportunities: sortedMatches,
+            timesShortlisted,
+            recentConversations: conversations.conversations?.slice(0, 3) || [],
+        };
+
+        return { status: 'success', message: 'Stats fetched successfully.', stats };
+
+    } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+        const message = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return { status: 'error', message, stats: null };
+    }
+}
+
+export async function getApplicantsForStartup(startupId: string): Promise<{ status: 'success' | 'error', message: string, applications: ApplicationWithExecutive[] }> {
+    const db = admin.firestore();
+
+    try {
+        const needsSnapshot = await db.collection('startup-needs').where('creatorId', '==', startupId).get();
+        if (needsSnapshot.empty) {
+            return { status: 'success', message: 'No needs created by this startup.', applications: [] };
+        }
+        const needIds = needsSnapshot.docs.map(doc => doc.id);
+
+        const appsSnapshot = await db.collection('applications')
+            .where('startupNeedId', 'in', needIds)
+            .orderBy('appliedAt', 'desc')
+            .get();
+
+        if (appsSnapshot.empty) {
+            return { status: 'success', message: 'No applications found for your roles.', applications: [] };
+        }
+
+        const executiveIds = [...new Set(appsSnapshot.docs.map(doc => doc.data().executiveId))];
+        const executivesSnapshot = await db.collection('executive-profiles').where(admin.firestore.FieldPath.documentId(), 'in', executiveIds).get();
+        const executivesMap = new Map<string, ExecutiveProfile>();
+        executivesSnapshot.forEach(doc => {
+            const execData = doc.data()
+            executivesMap.set(doc.id, {
+                id: doc.id,
+                ...execData,
+                keyAccomplishments: execData.keyAccomplishments || [],
+                industryExperience: execData.industryExperience || [],
+             } as ExecutiveProfile);
+        });
+
+        const needsMap = new Map<string, StartupNeeds>();
+        needsSnapshot.docs.forEach(doc => {
+            needsMap.set(doc.id, { id: doc.id, ...doc.data() } as StartupNeeds);
+        });
+
+        const shortlistSnapshot = await db.collection('startup-profiles').doc(startupId).collection('shortlisted-executives').get();
+        const shortlistedIds = new Set(shortlistSnapshot.docs.map(doc => doc.id));
+
+        const applicationsPromises = appsSnapshot.docs.map(async (doc) => {
+            const appData = doc.data();
+            const executive = executivesMap.get(appData.executiveId);
+            const startupNeed = needsMap.get(appData.startupNeedId);
+
+            if (!executive || !startupNeed) return null;
+
+            const accomplishments = executive.keyAccomplishments?.map(a => a.value).join('; ') || '';
+            const executiveProfileString = `Name: ${executive.name}. Expertise: ${executive.expertise}. Industry Experience: ${executive.industryExperience?.join(', ') || ''}. Availability: ${executive.availability}. Desired Compensation: ${executive.desiredCompensation}. Key Accomplishments: ${accomplishments}. GitHub Insights: ${executive.githubInsights || ''}`;
+
+            const startupNeedsString = `
+                Project Scope: ${startupNeed.roleSummary}.
+                Budget: ${startupNeed.budget}.
+                Required Expertise: ${Array.isArray(startupNeed.requiredExpertise) ? startupNeed.requiredExpertise.join(', ') : startupNeed.requiredExpertise}.
+                Company Stage: ${startupNeed.companyStage}.
+                Key Challenges & Dealbreakers: ${startupNeed.keyChallenges || 'Not specified'}.
+            `;
+
+            const matchResult = await matchExecutiveToStartup({
+                executiveProfile: executiveProfileString,
+                startupNeeds: startupNeedsString,
+            });
+
+            return {
+                id: doc.id,
+                status: appData.status,
+                appliedAt: appData.appliedAt.toDate().toISOString(),
+                matchScore: matchResult.matchScore,
+                executive: {
+                    ...executive,
+                    isShortlisted: shortlistedIds.has(executive.id),
+                    photoUrl: executive.photoUrl || 'https://placehold.co/100x100.png',
+                    expertise: executive.expertise || 'No expertise summary provided.',
+                    createdAt: (executive.createdAt as any)?.toDate().toISOString(),
+                    updatedAt: (executive.updatedAt as any)?.toDate().toISOString(),
+                },
+                startupNeed: {
+                    ...startupNeed,
+                     roleTitle: startupNeed.roleTitle || "Untitled Role",
+                     roleSummary: startupNeed.roleSummary || "",
+                     requiredExpertise: Array.isArray(startupNeed.requiredExpertise) ? startupNeed.requiredExpertise.join(', ') : startupNeed.requiredExpertise,
+                     createdAt: (startupNeed.createdAt as any)?.toDate().toISOString(),
+                     updatedAt: (startupNeed.updatedAt as any)?.toDate().toISOString(),
+                }
+            };
+        });
+
+        const applications = (await Promise.all(applicationsPromises))
+            .filter(Boolean) as ApplicationWithExecutive[];
+
+        return { status: 'success', message: 'Applications fetched successfully.', applications };
+
+    } catch (error) {
+        console.error('Error fetching applications:', error);
+        const message = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return { status: 'error', message, applications: [] };
+    }
 }
 
 export async function getStartupDashboardStats(startupId: string): Promise<{ status: 'success' | 'error', message: string, stats: StartupDashboardStats | null }> {
@@ -1508,13 +2018,13 @@ export async function getStartupDashboardStats(startupId: string): Promise<{ sta
                              photoUrl: execData.photoUrl || 'https://placehold.co/100x100.png',
                              expertise: execData.expertise || 'No expertise summary provided.',
                              industryExperience: execData.industryExperience || [],
-                            createdAt: getTimestamp(execData, 'createdAt'),
-                            updatedAt: getTimestamp(execData, 'updatedAt'),
+                             createdAt: execData.createdAt?.toDate().toISOString(),
+                             updatedAt: execData.updatedAt?.toDate().toISOString(),
                              isShortlisted: shortlistedIds.has(doc.id)
                         } as ExecutiveProfile);
                     });
 
-                    const needsMap = new Map<string, any>();
+                    const needsMap = new Map<string, StartupNeeds>();
                     needsSnapshot.forEach(doc => {
                          const needData = doc.data();
                          needsMap.set(doc.id, {
@@ -1523,28 +2033,47 @@ export async function getStartupDashboardStats(startupId: string): Promise<{ sta
                             roleTitle: needData.roleTitle,
                             roleSummary: needData.roleSummary,
                             requiredExpertise: Array.isArray(needData.requiredExpertise) ? needData.requiredExpertise.join(', ') : needData.requiredExpertise,
-                            createdAt: getTimestamp(needData, 'createdAt'),
-                            updatedAt: getTimestamp(needData, 'updatedAt'),
+                            createdAt: needData.createdAt?.toDate().toISOString(),
+                            updatedAt: needData.updatedAt?.toDate().toISOString(),
                         } as StartupNeeds);
 
-                        // Also, add to the global needs map for easy access
-                        needsMap.set(needData.creatorId, { id: needData.creatorId, companyName: needData.companyName, roleTitle: needData.roleTitle, status: needData.status } as Partial<StartupNeeds>);
+                        // Add to exec map for easier access
+                        if (!executivesMap.has(needData.creatorId)) {
+                            executivesMap.set(needData.creatorId, {
+                                id: needData.creatorId,
+                                name: needData.companyName,
+                                photoUrl: needData.logoUrl || 'https://placehold.co/100x100.png',
+                                expertise: '',
+                                industryExperience: [],
+                                keyAccomplishments: [],
+                                availability: '',
+                                desiredCompensation: '',
+                                createdAt: new Date(),
+                                updatedAt: new Date(),
+                                isShortlisted: false,
+                                matchScore: 0,
+                                rationale: '',
+                                recommendation: '',
+                            } as ExecutiveProfile);
+                        }
                     });
 
-                    recentApplicants = ((appsSnapshot.docs.map(doc => {
-                        const appData = doc.data();
-                        const executive = executivesMap.get(appData.executiveId);
-                        const startupNeed = needsMap.get(appData.startupNeedId);
-                        if (!executive || !startupNeed) return null;
-
-                        return {
-                            id: doc.id,
-                            status: appData.status,
-                            appliedAt: getTimestamp(appData, 'appliedAt'),
-                            executive,
-                            startupNeed
-                        };
-                    }).filter(Boolean)) as ApplicationWithExecutive[]).sort((a,b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime()).slice(0, 3);
+                    recentApplicants = appsSnapshot.docs.map(doc => {
+                         const appData = doc.data();
+                         const executive = executivesMap.get(appData.executiveId);
+                         const startupNeed = needsMap.get(appData.startupNeedId);
+                         if (!executive || !startupNeed) return null;
+ 
+                         return {
+                             id: doc.id,
+                             status: appData.status,
+                             appliedAt: appData.appliedAt.toDate().toISOString(),
+                             executive,
+                             startupNeed
+                         };
+                    }).filter(Boolean) as ApplicationWithExecutive[]
+                    .sort((a,b) => new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime())
+                    .slice(0, 3);
                 }
             }
         }
@@ -1642,18 +2171,14 @@ export async function getShortlistedExecutivesForStartup(startupId: string): Pro
         });
 
         const profilesPromises = executivesSnapshot.docs.map(async (doc) => {
-            const dataRaw = doc.data() || {};
-            const data = parseExecutiveProfile(dataRaw) || (dataRaw as ExecutiveProfile);
+            const data = doc.data() as ExecutiveProfile;
 
             let highestMatchScore = 0;
             if (!startupNeedsSnapshot.empty) {
                  const matchScores = await Promise.all(startupNeedsSnapshot.docs.map(async (needDoc) => {
-                    const startupNeedRaw = needDoc.data() || {};
-                    const startupNeedParsed = parseStartupNeed(startupNeedRaw);
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const startupNeed = (startupNeedParsed ?? (startupNeedRaw as any)) as StartupNeeds;
+                    const startupNeed = needDoc.data() as StartupNeeds;
 
-                    const accomplishments = data.keyAccomplishments?.map((a: any) => a.value).join('; ') || '';
+                    const accomplishments = data.keyAccomplishments?.map(a => a.value).join('; ') || '';
                     const executiveProfileString = `Name: ${data.name}. Expertise: ${data.expertise}. Industry Experience: ${data.industryExperience?.join(', ') || ''}. Availability: ${data.availability}. Desired Compensation: ${data.desiredCompensation}. Key Accomplishments: ${accomplishments}. GitHub Insights: ${data.githubInsights || ''}`;
 
                     const startupNeedsString = `
@@ -1681,11 +2206,11 @@ export async function getShortlistedExecutivesForStartup(startupId: string): Pro
                 photoUrl: data.photoUrl || 'https://placehold.co/100x100.png',
                 expertise: data.expertise || 'No expertise summary provided.',
                 industryExperience: data.industryExperience || [],
-                updatedAt: getTimestamp(data, 'updatedAt') || undefined,
-                createdAt: getTimestamp(data, 'createdAt') || undefined,
+                updatedAt: (data.updatedAt as any)?.toDate().toISOString() || undefined,
+                createdAt: (data.createdAt as any)?.toDate().toISOString() || undefined,
                 matchScore: highestMatchScore,
                 appliedToRoleTitle: applicationsMap.get(doc.id) || null,
-                shortlistedAt: getTimestamp(shortlistDoc?.data(), 'shortlistedAt') || undefined,
+                shortlistedAt: shortlistDoc?.data().shortlistedAt.toDate().toISOString(),
             } as ExecutiveProfile;
         });
 
@@ -1857,7 +2382,6 @@ export async function promoteUserToAdminByEmail(
 }
 
 
-
 export async function getAdminAllUsers(adminId: string): Promise<{ status: string, users?: UserListItem[], message: string }> {
     try {
         await checkAdmin(adminId);
@@ -1885,7 +2409,7 @@ export async function getAdminAllOpportunities(adminId: string): Promise<{ statu
         const needsSnapshot = await db.collection('startup-needs').orderBy('createdAt', 'desc').get();
         const needs = needsSnapshot.docs.map(doc => {
             const data = doc.data();
-            return { ...data, id: doc.id, createdAt: getTimestamp(data, 'createdAt')!, updatedAt: getTimestamp(data, 'updatedAt') } as StartupNeeds;
+            return { ...data, id: doc.id, createdAt: data.createdAt.toDate().toISOString(), updatedAt: data.updatedAt?.toDate().toISOString() } as StartupNeeds;
         });
         return { status: 'success', needs, message: 'Opportunities fetched' };
     } catch (error: any) {
@@ -1903,14 +2427,14 @@ export async function getAdminAllApplications(adminId: string): Promise<{ status
         const execIds = [...new Set(appsSnapshot.docs.map(d => d.data().executiveId))];
 
         const [needsSnapshot, execsSnapshot, startupsSnapshot] = await Promise.all([
-            needsIds.length ? db.collection('startup-needs').where(admin.firestore.FieldPath.documentId(), 'in', needsIds).get() : Promise.resolve({ docs: [] } as { docs: any[] }),
-            execIds.length ? db.collection('executive-profiles').where(admin.firestore.FieldPath.documentId(), 'in', execIds).get() : Promise.resolve({ docs: [] } as { docs: any[] }),
+            needsIds.length ? db.collection('startup-needs').where(admin.firestore.FieldPath.documentId(), 'in', needsIds).get() : Promise.resolve({ docs: [] }),
+            execIds.length ? db.collection('executive-profiles').where(admin.firestore.FieldPath.documentId(), 'in', execIds).get() : Promise.resolve({ docs: [] }),
              db.collection('startup-profiles').get()
         ]);
 
-    const needsMap = new Map<string, any>(needsSnapshot.docs.map((d: any) => [d.id, d.data()]));
-    const execsMap = new Map<string, any>(execsSnapshot.docs.map((d: any) => [d.id, d.data()]));
-    const startupsMap = new Map<string, any>(startupsSnapshot.docs.map((d: any) => [d.id, d.data()]));
+        const needsMap = new Map(needsSnapshot.docs.map(d => [d.id, d.data()]));
+        const execsMap = new Map(execsSnapshot.docs.map(d => [d.id, d.data()]));
+        const startupsMap = new Map(startupsSnapshot.docs.map(d => [d.id, d.data()]));
 
 
         const applications = appsSnapshot.docs.map(doc => {
@@ -1928,7 +2452,7 @@ export async function getAdminAllApplications(adminId: string): Promise<{ status
                 needId: data.startupNeedId,
                 roleTitle: need?.roleTitle || 'N/A',
                 status: data.status,
-                appliedAt: getTimestamp(data, 'appliedAt') || new Date().toISOString(),
+                appliedAt: data.appliedAt.toDate().toISOString(),
             }
         });
 
@@ -1957,21 +2481,13 @@ export async function getAdminAllShortlisted(adminId: string): Promise<{ status:
             executiveIds.add(doc.id);
         });
 
-    const startupsPromise = startupIds.size > 0 ? db.collection('startup-profiles').where(admin.firestore.FieldPath.documentId(), 'in', Array.from(startupIds)).get() : Promise.resolve({ docs: [] } as { docs: any[] });
-    const executivesPromise = executiveIds.size > 0 ? db.collection('executive-profiles').where(admin.firestore.FieldPath.documentId(), 'in', Array.from(executiveIds)).get() : Promise.resolve({ docs: [] } as { docs: any[] });
+        const startupsPromise = startupIds.size > 0 ? db.collection('startup-profiles').where(admin.firestore.FieldPath.documentId(), 'in', Array.from(startupIds)).get() : Promise.resolve({ docs: [] as any[] });
+        const executivesPromise = executiveIds.size > 0 ? db.collection('executive-profiles').where(admin.firestore.FieldPath.documentId(), 'in', Array.from(executiveIds)).get() : Promise.resolve({ docs: [] as any[] });
 
         const [startupsSnapshot, executivesSnapshot] = await Promise.all([startupsPromise, executivesPromise]);
 
-    const startupsMap = new Map<string, StartupProfile>(startupsSnapshot.docs.map((doc: any) => {
-        const raw = doc.data() || {};
-        const parsed = parseStartupProfile(raw) || (raw as StartupProfile);
-        return [doc.id, parsed as StartupProfile];
-    }));
-    const executivesMap = new Map<string, ExecutiveProfile>(executivesSnapshot.docs.map((doc: any) => {
-        const raw = doc.data() || {};
-        const parsed = parseExecutiveProfile(raw) || (raw as ExecutiveProfile);
-        return [doc.id, parsed as ExecutiveProfile];
-    }));
+        const startupsMap = new Map(startupsSnapshot.docs.map(doc => [doc.id, doc.data()]));
+        const executivesMap = new Map(executivesSnapshot.docs.map(doc => [doc.id, doc.data()]));
 
 
         allShortlistedDocs.forEach(doc => {
@@ -1988,7 +2504,7 @@ export async function getAdminAllShortlisted(adminId: string): Promise<{ status:
                     executiveName: executive.name || 'N/A',
                     startupId: startupId,
                     startupName: startup.companyName || 'N/A',
-                    shortlistedAt: getTimestamp(doc.data() || {}, 'shortlistedAt') || new Date().toISOString(),
+                    shortlistedAt: doc.data().shortlistedAt.toDate().toISOString(),
                 });
             }
         });
@@ -2024,21 +2540,13 @@ export async function getAdminAllSaved(adminId: string): Promise<{ status: strin
             allNeedIds.add(needId);
         });
 
-    const executivesPromise = executiveIds.size > 0 ? db.collection('executive-profiles').where(admin.firestore.FieldPath.documentId(), 'in', Array.from(executiveIds)).get() : Promise.resolve({ docs: [] } as { docs: any[] });
-    const needsPromise = allNeedIds.size > 0 ? db.collection('startup-needs').where(admin.firestore.FieldPath.documentId(), 'in', Array.from(allNeedIds)).get() : Promise.resolve({ docs: [] } as { docs: any[] });
+        const executivesPromise = executiveIds.size > 0 ? db.collection('executive-profiles').where(admin.firestore.FieldPath.documentId(), 'in', Array.from(executiveIds)).get() : Promise.resolve({ docs: [] as any[] });
+        const needsPromise = allNeedIds.size > 0 ? db.collection('startup-needs').where(admin.firestore.FieldPath.documentId(), 'in', Array.from(allNeedIds)).get() : Promise.resolve({ docs: [] as any[] });
 
         const [executivesSnapshot, needsSnapshot] = await Promise.all([executivesPromise, needsPromise]);
 
-    const executivesMap = new Map<string, ExecutiveProfile>(executivesSnapshot.docs.map((d: any) => {
-        const raw = d.data() || {};
-        const parsed = parseExecutiveProfile(raw) || (raw as ExecutiveProfile);
-        return [d.id, parsed as ExecutiveProfile];
-    }));
-    const needsMap = new Map<string, StartupNeeds>(needsSnapshot.docs.map((d: any) => {
-        const raw = d.data() || {};
-        const parsed = parseStartupNeed(raw) || (raw as StartupNeeds);
-        return [d.id, parsed as StartupNeeds];
-    }));
+        const executivesMap = new Map(executivesSnapshot.docs.map(d => [d.id, d.data()]));
+        const needsMap = new Map(needsSnapshot.docs.map(d => [d.id, d.data()]));
 
         allSavedDocs.forEach(doc => {
             const pathParts = doc.ref.path.split('/');
@@ -2053,7 +2561,7 @@ export async function getAdminAllSaved(adminId: string): Promise<{ status: strin
                 executiveName: executive?.name || 'N/A',
                 needId,
                 roleTitle: need?.roleTitle || 'N/A (Deleted Need)',
-                savedAt: getTimestamp(doc.data(), 'savedAt') || new Date().toISOString(),
+                savedAt: doc.data().savedAt.toDate().toISOString(),
             });
         });
 
@@ -2144,17 +2652,15 @@ export async function generateInitialMessage(input: { startupId: string, executi
             return { status: 'error', message: 'Could not find profile for startup or executive.' };
         }
 
-    const startupRaw = startupDoc.data() || {};
-    const startupProfile = parseStartupProfile(startupRaw) || (startupRaw as StartupProfile);
-    const executiveRaw = executiveDoc.data() || {};
-    const executiveProfile = parseExecutiveProfile(executiveRaw) || (executiveRaw as ExecutiveProfile);
+        const startupProfile = startupDoc.data() as StartupProfile;
+        const executiveProfile = executiveDoc.data() as ExecutiveProfile;
 
         const messageText = await createIntroductionMessage({
-            startupName: startupProfile.companyName || '',
-            executiveName: executiveProfile.name || '',
-            startupMission: startupProfile.shortDescription || '',
-            startupChallenge: startupProfile.currentChallenge || '',
-            executiveExpertise: executiveProfile.expertise || '',
+            startupName: startupProfile.companyName,
+            executiveName: executiveProfile.name,
+            startupMission: startupProfile.shortDescription,
+            startupChallenge: startupProfile.currentChallenge,
+            executiveExpertise: executiveProfile.expertise,
             executiveAccomplishment: executiveProfile.keyAccomplishments?.[0]?.value || 'their impressive background',
         });
 
@@ -2179,18 +2685,14 @@ export async function generateFollowUpMessage(input: { executiveId: string, need
             return { status: 'error', message: 'Could not find profile or role details.' };
         }
 
-    const executiveRaw = executiveDoc.data() || {};
-    const executiveProfile = parseExecutiveProfile(executiveRaw) || (executiveRaw as ExecutiveProfile);
-    const needRaw = needDoc.data() || {};
-    const needParsed = parseStartupNeed(needRaw);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const need = (needParsed ?? (needRaw as any)) as StartupNeeds;
+        const executiveProfile = executiveDoc.data() as ExecutiveProfile;
+        const need = needDoc.data() as StartupNeeds;
 
         const messageText = await createFollowUpMessage({
-            executiveName: executiveProfile.name || '',
-            startupName: need.companyName || '',
-            roleTitle: need.roleTitle || '',
-            executiveExpertise: executiveProfile.expertise || '',
+            executiveName: executiveProfile.name,
+            startupName: need.companyName,
+            roleTitle: need.roleTitle,
+            executiveExpertise: executiveProfile.expertise,
         });
 
         return { status: 'success', message: messageText };
@@ -2238,8 +2740,7 @@ export async function getConversationsForUser(userId: string): Promise<{ status:
         // This is a bit inefficient, but needed to get avatars for now
         const startupProfiles = await db.collection('startup-profiles').get();
         startupProfiles.forEach(doc => {
-            const raw = doc.data() || {};
-            const data = parseStartupProfile(raw) || (raw as StartupProfile);
+            const data = doc.data() as StartupProfile;
             const existing = recipientsMap.get(doc.id);
             if (existing) {
                 existing.avatarUrl = data.companyLogoUrl;
@@ -2247,8 +2748,7 @@ export async function getConversationsForUser(userId: string): Promise<{ status:
         });
         const executiveProfiles = await db.collection('executive-profiles').get();
         executiveProfiles.forEach(doc => {
-             const raw = doc.data() || {};
-             const data = parseExecutiveProfile(raw) || (raw as ExecutiveProfile);
+             const data = doc.data() as ExecutiveProfile;
             const existing = recipientsMap.get(doc.id);
             if (existing) {
                 existing.avatarUrl = data.photoUrl;
@@ -2269,8 +2769,8 @@ export async function getConversationsForUser(userId: string): Promise<{ status:
                 userConversations.push({
                     id: doc.id,
                     ...data,
-                    createdAt: getTimestamp(data, 'createdAt') || new Date().toISOString(),
-                    lastMessageAt: getTimestamp(data, 'lastMessageAt') || new Date().toISOString(),
+                    createdAt: data.createdAt.toDate().toISOString(),
+                    lastMessageAt: data.lastMessageAt.toDate().toISOString(),
                     recipientName: recipient?.name || data.guestName || "Unknown User",
                     recipientAvatarUrl: recipient?.avatarUrl,
                 } as ConversationWithRecipient);
@@ -2282,8 +2782,8 @@ export async function getConversationsForUser(userId: string): Promise<{ status:
             return {
                 id: `broadcast_${doc.id}`,
                 participants: [data.senderId, userId],
-                lastMessageAt: getTimestamp(data, 'createdAt') || new Date().toISOString(),
-                createdAt: getTimestamp(data, 'createdAt') || new Date().toISOString(),
+                lastMessageAt: data.createdAt.toDate().toISOString(),
+                createdAt: data.createdAt.toDate().toISOString(),
                 lastMessageText: data.text,
                 recipientName: "Sensei Seek Announcements",
                 unreadCounts: {}, // Broadcasts don't have unread counts for individuals
@@ -2311,17 +2811,17 @@ export async function getMessagesForConversation(conversationId: string, current
             if (!broadcastDoc.exists) {
                 return { status: 'error', message: 'Broadcast not found.', messages: [] };
             }
-            const data = broadcastDoc.data();
+            const data = broadcastDoc.data()!;
             const message: Message = {
                 id: broadcastDoc.id,
                 conversationId: conversationId,
-                senderId: data?.senderId,
-                text: data?.text,
-                createdAt: getTimestamp(data, 'createdAt') || new Date().toISOString(),
+                senderId: data.senderId,
+                text: data.text,
+                createdAt: data.createdAt.toDate().toISOString(),
                 isReadByRecipient: true, // Broadcasts are always "read"
                 isBroadcast: true,
                 status: 'delivered',
-            } as Message;
+            }
             return { status: 'success', message: 'Messages fetched.', messages: [message] };
         }
 
@@ -2338,7 +2838,7 @@ export async function getMessagesForConversation(conversationId: string, current
                 conversationId: conversationId,
                 senderId: data.senderId,
                 text: data.text,
-                createdAt: getTimestamp(data, 'createdAt') || new Date().toISOString(),
+                createdAt: data.createdAt.toDate().toISOString(),
                 isReadByRecipient: data.isReadByRecipient || false,
                 isBroadcast: data.isBroadcast || false,
                 status: data.isReadByRecipient ? 'read' : 'delivered',
@@ -2367,8 +2867,8 @@ export async function sendMessage(input: { conversationId: string; senderId: str
             if (!convoDoc.exists) {
                 throw new Error("Conversation does not exist.");
             }
-            const convoData = convoDoc.data() || {};
-            const recipientId = Array.isArray(convoData.participants) ? convoData.participants.find((p: string) => p !== senderId) : undefined;
+            const convoData = convoDoc.data()!;
+            const recipientId = convoData.participants.find((p: string) => p !== senderId);
 
             transaction.set(messageRef, {
                 senderId,
@@ -2687,4 +3187,78 @@ export async function broadcastMessageToAllUsers(
         console.error("Error broadcasting message:", error);
         return { status: 'error', message: error.message || 'An unknown error occurred.' };
     }
+}
+
+
+// Fetch public GitHub repositories for a given handle and compute a short
+// insights summary and a set of highlights. Executives can review/edit
+// these highlights in the UI before saving them to their profile.
+type GithubInsightsState = {
+  formState: 'idle' | 'loading' | 'success' | 'error';
+  message: string;
+  insights?: string;
+}
+
+export async function fetchGithubInsights(prevState: GithubInsightsState, input: { githubHandle?: string }): Promise<GithubInsightsState> {
+  const handle = input.githubHandle?.trim();
+  if (!handle) {
+    return { formState: 'error', message: 'Please provide a GitHub handle.' };
+  }
+
+  try {
+    const res = await fetch(`https://api.github.com/users/${encodeURIComponent(handle)}/repos?per_page=100`, {
+      headers: {
+        Accept: 'application/vnd.github.v3+json',
+        // Note: We intentionally do not send an auth token here. If you
+        // want to use an authenticated request (to avoid rate limits),
+        // set GITHUB_TOKEN in env and attach Authorization header.
+      }
+    });
+
+    if (!res.ok) {
+      if (res.status === 404) {
+        return { formState: 'error', message: 'GitHub user not found.' };
+      }
+      return { formState: 'error', message: `GitHub API returned status ${res.status}.` };
+    }
+
+    const repos = await res.json();
+    if (!Array.isArray(repos) || repos.length === 0) {
+      return { formState: 'success', message: 'No public repositories found.', insights: 'No public repositories found for this account.' };
+    }
+
+    // Compute top languages and top repos
+    const langCounts: Record<string, number> = {};
+    repos.forEach((r: any) => {
+      if (r.language) {
+        langCounts[r.language] = (langCounts[r.language] || 0) + 1;
+      }
+    });
+    const topLanguages = Object.entries(langCounts).sort((a,b) => b[1] - a[1]).slice(0,3).map(e => e[0]);
+
+    const topStarred = [...repos].sort((a: any,b: any) => (b.stargazers_count || 0) - (a.stargazers_count || 0))[0];
+    const recent = [...repos].sort((a: any,b: any) => new Date(b.pushed_at).getTime() - new Date(a.pushed_at).getTime()).slice(0,3);
+
+    const highlights = [] as string[];
+    highlights.push(`Top languages: ${topLanguages.length ? topLanguages.join(', ') : 'Not available'}.`);
+    if (topStarred) {
+      highlights.push(`Most starred repo: ${topStarred.name} (${topStarred.stargazers_count || 0} stars) — ${topStarred.description || 'No description'}.`);
+    }
+    if (recent.length) {
+      highlights.push(`Recently active: ${recent.map((r: any) => r.name).join(', ')}.`);
+    }
+    // Add up to 3 repo highlights (name: stars — description)
+    const topThree = [...repos].sort((a: any,b: any) => (b.stargazers_count || 0) - (a.stargazers_count || 0)).slice(0,3);
+    topThree.forEach((r: any) => {
+      highlights.push(`${r.name}: ${(r.stargazers_count || 0)} ★ — ${r.description || 'No description'}`);
+    });
+
+    const insights = `GitHub Insights for ${handle}\n\n${highlights.join('\n\n')}`;
+
+    return { formState: 'success', message: 'Insights fetched successfully.', insights };
+  } catch (error) {
+    console.error('Error fetching GitHub data:', error);
+    const message = error instanceof Error ? error.message : 'An unknown error occurred while contacting GitHub.';
+    return { formState: 'error', message };
+  }
 }

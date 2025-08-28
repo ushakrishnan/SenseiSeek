@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
@@ -56,10 +55,10 @@ export default function ExecutiveProfileViewPage() {
   const [isShortlisting, startShortlistTransition] = useTransition();
   const [isGeneratingMessage, startGeneratingMessageTransition] = useTransition();
   const [isSendingMessage, startSendingMessageTransition] = useTransition();
-  
+
   const [showContactForm, setShowContactForm] = useState(false);
   const [messageContent, setMessageContent] = useState("");
-  
+
   const { toast } = useToast();
 
   const backLink = from === 'applicants' ? '/startups/applicants' : from === 'shortlisted' ? '/startups/shortlisted' : '/startups/find-talent';
@@ -94,16 +93,19 @@ export default function ExecutiveProfileViewPage() {
 
     fetchProfile();
   }, [user, id, toast]);
-  
+
   const handleShortlistToggle = () => {
     if (!user || !profile?.id) return;
-    
+
+    // Capture values outside the transition closure so TypeScript knows these exist
+    const profileId = profile.id;
+    const originalShortlistedState = profile.isShortlisted;
+
     startShortlistTransition(async () => {
-        const originalShortlistedState = profile.isShortlisted;
         // Optimistic update
         setProfile(p => p ? { ...p, isShortlisted: !p.isShortlisted } : null);
 
-        const result = await toggleShortlistExecutive(user.uid, profile.id, !!originalShortlistedState);
+        const result = await toggleShortlistExecutive(user.uid, profileId, !!originalShortlistedState);
         if (result.status === 'error') {
             // Revert on error
             setProfile(p => p ? { ...p, isShortlisted: originalShortlistedState } : null);
@@ -113,7 +115,7 @@ export default function ExecutiveProfileViewPage() {
             if (analytics) {
                 logEvent(analytics, 'add_to_wishlist', {
                     value: newStateIsShortlisted ? 1 : -1,
-                    item_id: profile.id,
+                    item_id: profileId,
                     content_type: 'executive_profile',
                 });
             }
@@ -124,7 +126,7 @@ export default function ExecutiveProfileViewPage() {
 
   const handleOpenContactForm = () => {
     if (!user || !profile?.id || !userDetails?.profile) return;
-    
+
     setShowContactForm(true);
 
     startGeneratingMessageTransition(async () => {
@@ -132,7 +134,7 @@ export default function ExecutiveProfileViewPage() {
             executiveId: profile.id!,
             startupId: user.uid,
         });
-        
+
         if (result.status === 'success' && result.message) {
             setMessageContent(result.message);
         } else {
@@ -156,7 +158,7 @@ export default function ExecutiveProfileViewPage() {
             executiveId: profile.id!,
             message: messageContent,
         });
-        
+
         if (result.status === 'success') {
             if (analytics) {
                 logEvent(analytics, 'share', {
@@ -292,7 +294,7 @@ export default function ExecutiveProfileViewPage() {
                                     <p>Generating message...</p>
                                 </div>
                             ) : (
-                                <Textarea 
+                                <Textarea
                                     value={messageContent}
                                     onChange={(e) => setMessageContent(e.target.value)}
                                     rows={12}

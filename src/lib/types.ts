@@ -1,5 +1,3 @@
-
-
 import type { z } from 'zod';
 import type { executiveProfileSchema, startupNeedsSchema, startupProfileSchema } from './schemas';
 
@@ -35,10 +33,10 @@ export type StartupNeeds = Omit<z.infer<typeof startupNeedsSchema>, 'projectScop
     logoUrl?: string;
     dataAiHint?: string;
     // For old data structure
-    projectScope: string; 
+    projectScope: string;
     requiredExpertise: string[] | string;
     status: 'active' | 'inactive';
-    createdAt: string; 
+    createdAt: string;
     updatedAt?: string;
     isSaved?: boolean;
     isApplied?: boolean;
@@ -155,6 +153,8 @@ export type Conversation = {
     lastMessageSenderId?: string;
     needId?: string;
     unreadCounts: { [key: string]: number };
+    // Whether this conversation represents a broadcast message (not a typical 1:1 convo)
+    isBroadcast?: boolean;
 }
 
 export type Message = {

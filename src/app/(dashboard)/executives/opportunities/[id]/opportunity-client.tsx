@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
@@ -38,9 +37,9 @@ const InfoCard = ({ icon: Icon, title, value, link }: { icon: React.ElementType,
             <Icon className="w-4 h-4 text-muted-foreground mt-1 flex-shrink-0" />
             <div>
                 <p className="font-semibold text-sm text-foreground">{title}</p>
-                {link ? 
+                {link ?
                     <a href={link} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline break-all">{value}</a>
-                    : 
+                    :
                     <p className="text-sm text-muted-foreground">{value}</p>
                 }
             </div>
@@ -58,7 +57,7 @@ export function OpportunityClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [isApplying, startApplying] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  
+
   const [showContactForm, setShowContactForm] = useState(false);
   const [isGeneratingMessage, startGeneratingMessageTransition] = useTransition();
   const [isSendingMessage, startSendingMessageTransition] = useTransition();
@@ -91,13 +90,13 @@ export function OpportunityClient() {
         .finally(() => setIsLoading(false));
     }
   }, [id, user, toast]);
-  
+
   const handleApply = () => {
     if (!need || !user) {
         toast({ title: "Error", description: "You must be logged in to apply.", variant: 'destructive'});
         return;
     }
-    
+
     startApplying(async () => {
         const result = await applyForOpportunity(need.id, user.uid);
         if (result.status === 'success') {
@@ -116,7 +115,7 @@ export function OpportunityClient() {
         }
     })
   }
-  
+
   const handleOpenContactForm = () => {
     if (!user || !need?.id) return;
     setShowContactForm(true);
@@ -138,7 +137,7 @@ export function OpportunityClient() {
 
   const handleSendMessage = () => {
     if (!need || !user || !userDetails?.profile) return;
-    
+
     startSendingMessageTransition(async () => {
         const result = await startConversation({
             initiator: 'executive',
@@ -194,8 +193,11 @@ export function OpportunityClient() {
         </Card>
     );
   }
-  
+
   const startupProfile = need.startupProfile;
+    const expertiseArray = Array.isArray(need.requiredExpertise)
+        ? need.requiredExpertise
+        : (typeof need.requiredExpertise === 'string' ? String(need.requiredExpertise).split(',') : []);
 
   return (
     <div className="space-y-6">
@@ -212,7 +214,7 @@ export function OpportunityClient() {
                           <p>Generating message...</p>
                       </div>
                   ) : (
-                      <Textarea 
+                      <Textarea
                           value={messageContent}
                           onChange={(e) => setMessageContent(e.target.value)}
                           rows={12}
@@ -264,7 +266,7 @@ export function OpportunityClient() {
                           <div>
                               <h3 className="font-semibold text-foreground">Required Expertise</h3>
                               <div className="flex flex-wrap gap-2">
-                                  {(Array.isArray(need.requiredExpertise) ? need.requiredExpertise : need.requiredExpertise.split(',')).map(skill => (
+                                  {expertiseArray.map((skill: string) => (
                                       <Badge key={skill} variant="outline">{skill.trim()}</Badge>
                                   ))}
                               </div>
@@ -279,8 +281,8 @@ export function OpportunityClient() {
                       <CardTitle>Take Action</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                      <Button 
-                          className="w-full" 
+                      <Button
+                          className="w-full"
                           onClick={handleApply}
                           disabled={isApplying || need.isApplied}
                       >
@@ -290,8 +292,8 @@ export function OpportunityClient() {
                             <><CheckCircle className="mr-2 h-4 w-4"/> Applied</>
                           ) : "Apply Now"}
                       </Button>
-                      <Button 
-                          className="w-full" 
+                      <Button
+                          className="w-full"
                           variant="outline"
                           onClick={handleOpenContactForm}
                           disabled={!need.isApplied || showContactForm}

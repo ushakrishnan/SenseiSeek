@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
@@ -55,8 +54,11 @@ export function ViewNeedClient({ initialData, errorMessage }: { initialData: Sta
         </Card>
     );
   }
-  
+
   const need = initialData;
+    const expertiseArray = Array.isArray(need.requiredExpertise)
+        ? need.requiredExpertise
+        : (typeof need.requiredExpertise === 'string' ? String(need.requiredExpertise).split(',') : []);
 
   return (
     <div className="mx-auto">
@@ -108,7 +110,7 @@ export function ViewNeedClient({ initialData, errorMessage }: { initialData: Sta
                         <div>
                         <h3 className="font-semibold text-foreground">Required Expertise</h3>
                         <div className="flex flex-wrap gap-2">
-                            {(Array.isArray(need.requiredExpertise) ? need.requiredExpertise : need.requiredExpertise.split(',')).map(skill => (
+                            {expertiseArray.map((skill: string) => (
                                 <Badge key={skill} variant="outline">{skill.trim()}</Badge>
                             ))}
                         </div>

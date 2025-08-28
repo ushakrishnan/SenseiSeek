@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import { useForm, useFieldArray } from "react-hook-form";
@@ -33,6 +31,7 @@ import {
   saveExecutiveProfile,
   parseResume,
   rewriteExecutiveProfileField,
+  fetchGithubInsights,
 } from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
 import { executiveProfileSchema } from "@/lib/schemas";
@@ -106,6 +105,7 @@ const locationOptions = ["Remote", "Hybrid", "On-site"];
 const skillOptions = allSkills.map(skill => ({ value: skill, label: skill }));
 
 const initialParseState = { formState: 'idle' as const, message: '', fields: undefined };
+const initialGithubInsightsState = { formState: 'idle' as const, message: '', insights: '' };
 
 const getInitials = (name: string | null | undefined) => {
     if (!name) return "";
@@ -124,12 +124,14 @@ export function ExecutiveProfileForm({ initialData }: { initialData: Partial<Exe
   const { toast } = useToast();
   const { user, refetchUserDetails } = useAuth();
   const [isSaving, startSaving] = useTransition();
+    const [isGhTransitionPending, startGhTransition] = useTransition();
   const [isRewriting, setIsRewriting] = useState<string | null>(null);
   const [isParseDialogOpen, setIsParseDialogOpen] = useState(false);
   const [isLinking, setIsLinking] = useState<string | null>(null);
 
   const [parseState, parseAction, isParsing] = useActionState(parseResume, initialParseState);
-  
+  const [ghState, ghAction, isGhPending] = useActionState(fetchGithubInsights, initialGithubInsightsState);
+
   const [rewriteState, rewriteAction, isRewritePending] = useActionState(rewriteExecutiveProfileField, {status: 'idle', message: ''});
 
 
@@ -152,6 +154,8 @@ export function ExecutiveProfileForm({ initialData }: { initialData: Partial<Exe
         personalWebsite: initialData?.links?.personalWebsite || "",
         portfolio: initialData?.links?.portfolio || "",
     },
+    githubHandle: initialData?.githubHandle || "",
+    githubInsights: initialData?.githubInsights || "",
     resumeText: initialData?.resumeText || "",
   }), [initialData]);
 
@@ -163,7 +167,7 @@ export function ExecutiveProfileForm({ initialData }: { initialData: Partial<Exe
 
   const watchedPhotoUrl = form.watch('photoUrl');
   const watchedName = form.watch('name');
-  
+
   const { fields: accomplishmentFields, append: appendAccomplishment, remove: removeAccomplishment } = useFieldArray({
       control: form.control,
       name: "keyAccomplishments",
@@ -172,7 +176,8 @@ export function ExecutiveProfileForm({ initialData }: { initialData: Partial<Exe
   useEffect(() => {
       if (parseState.formState === 'success' && parseState.fields) {
           Object.entries(parseState.fields).forEach(([key, value]) => {
-              form.setValue(key as keyof ExecutiveProfileFormValues, value as any, { shouldValidate: true });
+              // value may be unknown at runtime; rely on react-hook-form accepting `unknown` here.
+              form.setValue(key as keyof ExecutiveProfileFormValues, value as unknown as any, { shouldValidate: true });
           });
           toast({ title: 'Success', description: parseState.message });
           setIsParseDialogOpen(false);
@@ -181,12 +186,23 @@ export function ExecutiveProfileForm({ initialData }: { initialData: Partial<Exe
       }
   }, [parseState, form, toast]);
 
+  // When GitHub insights are returned, prefill the `githubInsights` form value
+  useEffect(() => {
+    if (ghState.formState === 'success' && ghState.insights) {
+    form.setValue('githubInsights' as keyof ExecutiveProfileFormValues, ghState.insights as unknown as any, { shouldValidate: true });
+      toast({ title: 'GitHub insights generated', description: 'Review the highlights below and edit before saving to your profile.' });
+    } else if (ghState.formState === 'error') {
+      toast({ title: 'GitHub insights failed', description: ghState.message, variant: 'destructive' });
+    }
+  }, [ghState, form, toast]);
+
   useEffect(() => {
     if (rewriteState.status === 'success' && rewriteState.rewrittenText) {
         if (rewriteState.field === 'expertise') {
             form.setValue('expertise', rewriteState.rewrittenText, { shouldValidate: true });
         } else if (rewriteState.field === 'accomplishment' && rewriteState.index !== undefined) {
-            form.setValue(`keyAccomplishments.${rewriteState.index}.value`, rewriteState.rewrittenText, { shouldValidate: true });
+            // Key name is dynamic; react-hook-form expects string keys — cast safely through unknown.
+            form.setValue(`keyAccomplishments.${rewriteState.index}.value` as unknown as keyof ExecutiveProfileFormValues, rewriteState.rewrittenText as any, { shouldValidate: true });
         }
         toast({ title: 'Success', description: `Field rewritten.` });
     } else if (rewriteState.status === 'error') {
@@ -200,19 +216,22 @@ export function ExecutiveProfileForm({ initialData }: { initialData: Partial<Exe
    const handleRewrite = (fieldName: 'expertise' | 'accomplishment', fieldLabel: string, index?: number) => {
     startSaving(() => {
       setIsRewriting(fieldName + (index ?? ''));
-      const currentValue = fieldName === 'expertise' ? form.getValues('expertise') : form.getValues(`keyAccomplishments.${index}.value`);
-      
-      rewriteAction({
-        fieldName: fieldLabel,
-        currentValue: currentValue as string,
-        index: index
-      });
+      const allValues = form.getValues();
+            const currentValue = fieldName === 'expertise'
+                ? String(allValues.expertise ?? '')
+                : String(allValues.keyAccomplishments?.[index as number]?.value ?? '');
+
+            rewriteAction({
+                fieldName: fieldLabel,
+                currentValue,
+                index: index
+            });
     })
   };
 
   const handleLinkAccount = async (providerName: 'google' | 'github' | 'microsoft' | 'twitter' | 'yahoo') => {
     if (!user) return;
-    
+
     let provider;
     switch(providerName) {
         case 'google':
@@ -281,9 +300,9 @@ export function ExecutiveProfileForm({ initialData }: { initialData: Partial<Exe
       }
     });
   };
-  
+
   const connectedProviders = user?.providerData.map(p => p.providerId.replace('.com','')) || [];
-  
+
   return (
     <Form {...form}>
       <div className="flex flex-col-reverse md:flex-row gap-8 items-start">
@@ -292,7 +311,7 @@ export function ExecutiveProfileForm({ initialData }: { initialData: Partial<Exe
             <p className="text-muted-foreground mb-6">The more details you provide, the better we can match you with the perfect role.</p>
         </div>
       </div>
-      
+
        {isNewProfile && (
           <Card className="mb-8">
             <CardHeader>
@@ -311,8 +330,8 @@ export function ExecutiveProfileForm({ initialData }: { initialData: Partial<Exe
                                 Parsing...
                             </>
                         ) : 'Parse Resume'}
-                    </Button>
-                </CardContent>
+                      </Button>
+                    </CardContent>
             </form>
           </Card>
       )}
@@ -601,7 +620,7 @@ export function ExecutiveProfileForm({ initialData }: { initialData: Partial<Exe
                         />
                     </CardContent>
                 </Card>
-                
+
                  <Card>
                     <CardHeader><CardTitle>Relevant Links (Optional)</CardTitle></CardHeader>
                      <CardContent className="space-y-4">
@@ -644,16 +663,57 @@ export function ExecutiveProfileForm({ initialData }: { initialData: Partial<Exe
                                 </FormItem>
                             )}
                         />
+                        <FormField
+                            control={form.control}
+                            name="githubHandle"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>GitHub Handle</FormLabel>
+                                    <FormDescription>Provide your GitHub username (e.g., <em>ushakrishnan</em>) so we can analyze public repositories to generate highlights. You'll be able to review and edit these insights before saving them to your profile. This helps our AI better understand your capabilities and improves matching.</FormDescription>
+                                    <div className="flex items-center gap-2">
+                                        <FormControl>
+                                            <Input placeholder="e.g. ushakrishnan" {...field} />
+                                        </FormControl>
+                                        <Button type="button" onClick={() => startGhTransition(() => ghAction({ githubHandle: field.value }))} disabled={isGhPending || isGhTransitionPending}>
+                                            {isGhPending || isGhTransitionPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GitHubIcon className="mr-2 h-4 w-4" />}
+                                            Analyze
+                                        </Button>
+                                    </div>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                      </CardContent>
                  </Card>
+                 {/* GitHub Highlights (editable) */}
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>GitHub Highlights</CardTitle>
+                        <CardDescription>Generated from your public GitHub profile. Edit these highlights before saving them to your profile. They will be used to augment your profile for AI-based matching.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <FormField
+                            control={form.control}
+                            name="githubInsights"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormControl>
+                                        <Textarea rows={6} placeholder="GitHub highlights will appear here after analysis..." {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </CardContent>
+                </Card>
                  <Card>
                     <CardHeader>
                         <CardTitle>Account Security</CardTitle>
                         <CardDescription>Connect other sign-in methods to your account.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             className="w-full justify-start"
                             onClick={() => handleLinkAccount('google')}
                             disabled={isLinking !== null || connectedProviders.includes('google')}
@@ -661,8 +721,8 @@ export function ExecutiveProfileForm({ initialData }: { initialData: Partial<Exe
                             {isLinking === 'google' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
                             {connectedProviders.includes('google') ? 'Connected to Google' : 'Connect Google Account'}
                         </Button>
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             className="w-full justify-start"
                              onClick={() => handleLinkAccount('github')}
                             disabled={isLinking !== null || connectedProviders.includes('github')}
@@ -670,8 +730,8 @@ export function ExecutiveProfileForm({ initialData }: { initialData: Partial<Exe
                              {isLinking === 'github' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GitHubIcon className="mr-2 h-4 w-4" />}
                             {connectedProviders.includes('github') ? 'Connected to GitHub' : 'Connect GitHub Account'}
                         </Button>
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             className="w-full justify-start"
                              onClick={() => handleLinkAccount('microsoft')}
                             disabled={isLinking !== null || connectedProviders.includes('microsoft')}
@@ -679,8 +739,8 @@ export function ExecutiveProfileForm({ initialData }: { initialData: Partial<Exe
                              {isLinking === 'microsoft' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MicrosoftIcon className="mr-2 h-4 w-4" />}
                             {connectedProviders.includes('microsoft') ? 'Connected to Microsoft' : 'Connect Microsoft Account'}
                         </Button>
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             className="w-full justify-start"
                              onClick={() => handleLinkAccount('twitter')}
                             disabled={isLinking !== null || connectedProviders.includes('twitter')}
@@ -688,8 +748,8 @@ export function ExecutiveProfileForm({ initialData }: { initialData: Partial<Exe
                              {isLinking === 'twitter' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <TwitterIcon className="mr-2 h-4 w-4" />}
                             {connectedProviders.includes('twitter') ? 'Connected to Twitter' : 'Connect Twitter Account'}
                         </Button>
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             className="w-full justify-start"
                              onClick={() => handleLinkAccount('yahoo')}
                             disabled={isLinking !== null || connectedProviders.includes('yahoo')}
