@@ -5,7 +5,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Rocket, Briefcase, Zap, Video, CheckCircle } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
-import HeroGithubBadge from '@/components/HeroGithubBadge';
 
 export default function HomePage() {
   const testimonials = [
@@ -53,16 +52,14 @@ export default function HomePage() {
               <p className="mt-4 max-w-3xl mx-auto text-lg text-white/80">
                 The premier platform connecting elite fractional executives with innovative startups poised for explosive growth. Find your strategic match and build the future, together.
               </p>
-              <div className="mt-6 flex justify-center">
-                <HeroGithubBadge repo="https://github.com/ushakrishnan/SenseiSeek" />
-              </div>
+              {/* Promotional GitHub badge removed for private distribution. */}
               <div className="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4">
                 <Button size="lg" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90" asChild>
-                    <Link href="/startups">I'm a Startup Looking to Hire</Link>
+                  <Link href="/startups">I'm a Startup Looking to Hire</Link>
                 </Button>
                 <span className="text-white/60 mx-4 hidden sm:block">or</span>
-                 <Button size="lg" className="w-full sm:w-auto bg-[hsl(var(--exec-blue))] hover:bg-[hsl(var(--exec-blue))]/90 text-primary-foreground" asChild>
-                    <Link href="/executives">I'm an Executive Looking for a Role</Link>
+                <Button size="lg" className="w-full sm:w-auto bg-[hsl(var(--exec-blue))] hover:bg-[hsl(var(--exec-blue))]/90 text-primary-foreground" asChild>
+                  <Link href="/executives">I'm an Executive Looking for a Role</Link>
                 </Button>
               </div>
             </div>
@@ -74,9 +71,9 @@ export default function HomePage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 {/* For Startups */}
                 <div className="flex flex-col items-center text-center p-8 border rounded-lg bg-card/50">
-                    <div className="p-4 bg-primary/10 rounded-full mb-4">
-                        <Rocket className="h-10 w-10 text-primary" />
-                    </div>
+                  <div className="p-4 bg-primary/10 rounded-full mb-4">
+                    <Rocket className="h-10 w-10 text-primary" />
+                  </div>
                   <h2 className="font-headline text-3xl font-bold mb-4">For Startups</h2>
                   <p className="text-foreground/70 mb-6 max-w-md">
                     Stop compromising on leadership. Access the strategic brilliance of a C-suite executive on a flexible, cost-effective basis.
@@ -91,15 +88,15 @@ export default function HomePage() {
                   </Button>
                 </div>
                 {/* For Executives */}
-                 <div className="flex flex-col items-center text-center p-8 border rounded-lg bg-card/50">
-                    <div className="p-4 bg-blue-500/10 rounded-full mb-4">
-                        <Briefcase className="h-10 w-10 text-blue-500" />
-                    </div>
+                <div className="flex flex-col items-center text-center p-8 border rounded-lg bg-card/50">
+                  <div className="p-4 bg-blue-500/10 rounded-full mb-4">
+                    <Briefcase className="h-10 w-10 text-blue-500" />
+                  </div>
                   <h2 className="font-headline text-3xl font-bold mb-4">For Executives</h2>
                   <p className="text-foreground/70 mb-6 max-w-md">
                     Leverage your hard-won expertise on your own terms. Engage with exciting, high-impact projects that fit your lifestyle.
                   </p>
-                   <ul className="space-y-3 text-left mb-8 text-foreground/80">
+                  <ul className="space-y-3 text-left mb-8 text-foreground/80">
                     <li className="flex items-start"><CheckCircle className="h-5 w-5 mr-3 mt-1 text-blue-500 flex-shrink-0" /><span>Choose high-impact, curated fractional roles.</span></li>
                     <li className="flex items-start"><CheckCircle className="h-5 w-5 mr-3 mt-1 text-blue-500 flex-shrink-0" /><span>Define your own work-life balance and schedule.</span></li>
                     <li className="flex items-start"><CheckCircle className="h-5 w-5 mr-3 mt-1 text-blue-500 flex-shrink-0" /><span>Command premium compensation for your specialized skills.</span></li>

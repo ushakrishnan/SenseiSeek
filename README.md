@@ -3,7 +3,6 @@
 Sensei Seek is a commercial, proprietary marketplace platform that connects high-growth startups with experienced executives for fractional, interim, or advisory roles. This repository contains proprietary source code and is not open source.
 +
 Notice: This code is proprietary. You may not copy, distribute, publish, or use this software except as permitted by a separate written license from the owner. For licensing and commercial inquiries, contact: `ushapriya.krishnan@gmail.com`.
-+
 
 ---
 

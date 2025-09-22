@@ -54,12 +54,12 @@ export function Header() {
                 {item.name}
               </Link>
             ))}
-             <Link
-                href={dashboardLink}
-                className="transition-colors hover:text-foreground/80 text-foreground/60"
-              >
-                Dashboard
-              </Link>
+            <Link
+              href={dashboardLink}
+              className="transition-colors hover:text-foreground/80 text-foreground/60"
+            >
+              Dashboard
+            </Link>
           </nav>
         </div>
 
@@ -84,14 +84,14 @@ export function Header() {
                     </Link>
                   </SheetClose>
                 ))}
-                 <SheetClose asChild>
-                    <Link
-                      href={dashboardLink}
-                      className="transition-colors hover:text-foreground/80 text-foreground/60"
-                    >
-                      Dashboard
-                    </Link>
-                  </SheetClose>
+                <SheetClose asChild>
+                  <Link
+                    href={dashboardLink}
+                    className="transition-colors hover:text-foreground/80 text-foreground/60"
+                  >
+                    Dashboard
+                  </Link>
+                </SheetClose>
               </nav>
             </SheetContent>
           </Sheet>
@@ -103,10 +103,11 @@ export function Header() {
         </div>
 
         <div className="flex flex-1 items-center justify-end space-x-2">
-          <Button variant="ghost" size="icon" asChild>
-            <a href="https://github.com/ushakrishnan/SenseiSeek" target="_blank" rel="noopener noreferrer" title="View on GitHub">
+          {/* Promotional external repo link removed for private distribution. */}
+          <Button variant="ghost" size="icon" aria-hidden title="Repository (private)">
+            <span>
               <GitHubIcon className="h-4 w-4" />
-            </a>
+            </span>
           </Button>
           <ThemeToggle />
           {user ? (
