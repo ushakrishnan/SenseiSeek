@@ -10,6 +10,10 @@ This document provides a comprehensive overview of the features, user flows, and
 - **Fractional Roles**: The focus is on non-traditional, flexible employment models like fractional, interim, and advisory positions.
 - **Admin Oversight**: A super-user role (**Admin**) exists for platform management, user support, and data monitoring.
 
+Note: see `docs/ARCHITECTURE.md` for a short architectural overview and `docs/MATCHING_IMPLEMENTATION.md` for details on matching, embeddings, and the backfill/admin tooling.
+
+For API testing and interactive docs see `docs/SWAGGER_AUTH.md` for instructions on using the included Swagger UI and how to authenticate (cookie vs bearer token).
+
 ![Sensei Seek Marketing Pages](../public/assets/market2.gif)
 
 ---
@@ -85,7 +89,11 @@ The journey for a startup looking to hire executive talent.
 
 ### 2.3. Finding & Managing Talent
 - **Find Talent**: A gallery of all executive profiles on the platform, with filtering by keyword, availability, location, and skills. Each profile includes an AI-generated match score based on all of the startup's active needs. Pagination is included for easy browsing.
+  
+    Clarification: the **Find Talent** gallery computes a single `matchScore` per executive that represents the best fit across *all* active needs owned by the startup. This is intentionally different from the Applicants view (below), which reports a role-specific match for each application.
 - **Review Applicants**: A dedicated page to view all candidates who have applied to any of the startup's open roles. Each applicant has a match score specific to the role they applied for.
+  
+    Note: Recent implementation changes improved vector-first fallbacks and normalization so Find Talent shows meaningful scores even when LLM rerank is disabled. See `docs/MATCHING_IMPLEMENTATION.md` for the implementation notes and runtime flags.
     - **Status Management**: Change an applicant's status (In-Review, Hired, Rejected).
     - **AI-Generated Status Messages**: When changing a status, AI generates a professional, empathetic message to send to the candidate, which the startup can edit.
 - **Shortlisted Candidates**: A page to view all candidates the startup has shortlisted. Each candidate shows their best match score against all active roles.

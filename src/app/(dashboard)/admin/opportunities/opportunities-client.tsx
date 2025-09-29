@@ -16,7 +16,7 @@ import {
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { getAdminAllOpportunities } from '@/lib/actions';
+import { getAdminAllOpportunities } from '@/lib/client-actions';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
@@ -43,7 +43,7 @@ export function OpportunitiesClient() {
 
   const filteredNeeds = useMemo(() => {
     if (!searchTerm) return needs;
-    return needs.filter(need => 
+    return needs.filter(need =>
       need.roleTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
       need.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       need.status.toLowerCase().includes(searchTerm.toLowerCase())
@@ -55,7 +55,7 @@ export function OpportunitiesClient() {
       <CardHeader>
         <CardTitle>All Opportunities</CardTitle>
         <CardDescription>Browse and manage all needs posted by startups.</CardDescription>
-         <Input 
+        <Input
           placeholder="Filter by role, company, or status..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -64,8 +64,8 @@ export function OpportunitiesClient() {
       </CardHeader>
       {isLoading ? (
         <div className="text-center py-12">
-            <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
-            <p className="mt-4 text-muted-foreground">Loading opportunities...</p>
+          <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
+          <p className="mt-4 text-muted-foreground">Loading opportunities...</p>
         </div>
       ) : (
         <Table>
@@ -82,7 +82,7 @@ export function OpportunitiesClient() {
               <TableRow key={need.id}>
                 <TableCell className="font-medium">
                   <Link href={`/startups/needs/${need.id}`} className="text-primary hover:underline">
-                      {need.roleTitle}
+                    {need.roleTitle}
                   </Link>
                 </TableCell>
                 <TableCell>{need.companyName}</TableCell>

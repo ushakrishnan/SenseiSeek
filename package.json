@@ -2,12 +2,16 @@
   "name": "nextn",
   "version": "0.1.0",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "test": "vitest",
+    "generate-openapi": "node scripts/generate-openapi.js",
+    "generate-openapi-from-zod": "ts-node scripts/generate-openapi-from-zod.ts",
+    "docs": "npx serve public -p 3001",
+    "demo-get-session": "node scripts/demo-get-session.js",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
@@ -62,7 +66,10 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "zod-to-json-schema": "^3.0.0",
+    "esbuild-register": "^3.6.0",
     "@types/node": "^20.19.11",
+    "ts-node": "^10.9.1",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "eslint": "9.34.0",
@@ -71,6 +78,7 @@
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "vite-tsconfig-paths": "^4.0.0"
   }
 }

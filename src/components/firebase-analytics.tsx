@@ -12,10 +12,13 @@ function FirebaseAnalytics() {
         page_path: window.location.pathname,
       });
     }
-    
+
     // The performance object is initialized in firebase-client.ts and starts collecting data automatically.
     // No further action is needed here for basic performance monitoring.
 
+    // Global error handlers to capture resource/load errors or rejected Events
+    // Intentionally no global debug handlers to avoid noisy console output in production.
+    return () => { };
   }, []);
 
   return null;

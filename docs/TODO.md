@@ -150,3 +150,7 @@ Improve the development workflow and deployment pipeline.
         -   Set up a testing framework like Playwright or Cypress.
         -   Write test scripts for critical user flows (e.g., signup, profile creation, applying for a role).
         -   Integrate the tests into the CI/CD pipeline to run automatically on every pull request.
+
+        ---
+
+        Developer note (2025-09-25): The repository includes `scripts/backfill-embeddings.js` which supports `--dry-run`. Running the script without `--dry-run` will write `embeddings/*` docs to Firestore and upsert vectors to Pinecone (requires proper env vars). There is also `scripts/pinecone-query.js` to validate upserts and `tests/pinecone-smoke.test.ts` for opt-in smoke testing.

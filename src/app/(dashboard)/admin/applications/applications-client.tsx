@@ -16,7 +16,7 @@ import {
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { getAdminAllApplications } from '@/lib/actions';
+import { getAdminAllApplications } from '@/lib/client-actions';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
@@ -43,7 +43,7 @@ export function ApplicationsClient() {
 
   const filteredApplications = useMemo(() => {
     if (!searchTerm) return applications;
-    return applications.filter(app => 
+    return applications.filter(app =>
       app.executiveName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.roleTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.startupName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -56,7 +56,7 @@ export function ApplicationsClient() {
       <CardHeader>
         <CardTitle>All Applications</CardTitle>
         <CardDescription>Browse and manage all applications across the platform.</CardDescription>
-        <Input 
+        <Input
           placeholder="Filter by executive, role, startup, or status..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -65,8 +65,8 @@ export function ApplicationsClient() {
       </CardHeader>
       {isLoading ? (
         <div className="text-center py-12">
-            <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
-            <p className="mt-4 text-muted-foreground">Loading applications...</p>
+          <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
+          <p className="mt-4 text-muted-foreground">Loading applications...</p>
         </div>
       ) : (
         <Table>

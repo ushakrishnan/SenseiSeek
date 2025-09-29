@@ -8,40 +8,40 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Rocket, Zap, Users, BrainCircuit } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
-import { getExecutiveProfileById } from '@/lib/actions';
+import { getExecutiveProfileById } from '@/lib/client-actions';
 import { ExecutiveProfile } from '@/lib/types';
 
 // Dummy data for featured executives - this can be replaced with a fetch from your database
 const featuredExecutives: Partial<ExecutiveProfile>[] = [
-    {
-        id: 'exec-1',
-        name: 'Eleanor Vance',
-        expertise: 'Fractional CMO with 15+ years in B2B SaaS growth...',
-        industryExperience: ['SaaS', 'Fintech', 'B2B Marketing'],
-        photoUrl: 'https://placehold.co/100x100.png',
-        dataAiHint: 'woman portrait professional',
-    },
-    {
-        id: 'exec-2',
-        name: 'Marcus Thorne',
-        expertise: 'Interim COO skilled in scaling operations for Series A/B startups...',
-        industryExperience: ['E-commerce', 'Logistics', 'Operations Management'],
-        photoUrl: 'https://placehold.co/100x100.png',
-        dataAiHint: 'man portrait corporate',
-    },
-    {
-        id: 'exec-3',
-        name: 'Jian Li',
-        expertise: 'Fractional CTO with a background in AI/ML and data infrastructure...',
-        industryExperience: ['AI/ML', 'Big Data', 'Technical Strategy'],
-        photoUrl: 'https://placehold.co/100x100.png',
-        dataAiHint: 'asian woman portrait',
-    }
+  {
+    id: 'exec-1',
+    name: 'Eleanor Vance',
+    expertise: 'Fractional CMO with 15+ years in B2B SaaS growth...',
+    industryExperience: ['SaaS', 'Fintech', 'B2B Marketing'],
+    photoUrl: 'https://placehold.co/100x100.png',
+    dataAiHint: 'woman portrait professional',
+  },
+  {
+    id: 'exec-2',
+    name: 'Marcus Thorne',
+    expertise: 'Interim COO skilled in scaling operations for Series A/B startups...',
+    industryExperience: ['E-commerce', 'Logistics', 'Operations Management'],
+    photoUrl: 'https://placehold.co/100x100.png',
+    dataAiHint: 'man portrait corporate',
+  },
+  {
+    id: 'exec-3',
+    name: 'Jian Li',
+    expertise: 'Fractional CTO with a background in AI/ML and data infrastructure...',
+    industryExperience: ['AI/ML', 'Big Data', 'Technical Strategy'],
+    photoUrl: 'https://placehold.co/100x100.png',
+    dataAiHint: 'asian woman portrait',
+  }
 ];
 
 
 export default function StartupLandingPage() {
- 
+
 
   return (
     <div className="theme-orange">
@@ -132,7 +132,7 @@ export default function StartupLandingPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {featuredExecutives.map((exec) => (
                   <Card key={exec.id} className="flex flex-col">
-                     <CardHeader className="flex-row items-center gap-4">
+                    <CardHeader className="flex-row items-center gap-4">
                       <Avatar className="h-16 w-16">
                         <AvatarImage src={exec.photoUrl} data-ai-hint={exec.dataAiHint} className="object-cover" />
                         <AvatarFallback>{exec.name ? exec.name.substring(0, 2) : '??'}</AvatarFallback>
@@ -157,7 +157,7 @@ export default function StartupLandingPage() {
               </div>
             </div>
           </section>
-          
+
           {/* Final CTA */}
           <section className="py-24 md:py-32 bg-background">
             <div className="container mx-auto text-center px-4 max-w-3xl">

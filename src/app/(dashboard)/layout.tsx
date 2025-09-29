@@ -5,31 +5,31 @@
 import Link from "next/link";
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  SidebarProvider,
-  Sidebar,
-  SidebarHeader,
-  SidebarContent,
-  SidebarFooter,
-  SidebarInset,
+    SidebarProvider,
+    Sidebar,
+    SidebarHeader,
+    SidebarContent,
+    SidebarFooter,
+    SidebarInset,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
-  LayoutDashboard,
-  User,
-  Briefcase,
-  Search,
-  Bookmark,
-  Users,
-  FileText,
-  User as UserIcon,
-  Star,
-  Shield,
-  AlertTriangle,
-  Heart,
-  FileCheck,
-  MessageSquare,
-  HelpCircle,
+    LayoutDashboard,
+    User,
+    Briefcase,
+    Search,
+    Bookmark,
+    Users,
+    FileText,
+    User as UserIcon,
+    Star,
+    Shield,
+    AlertTriangle,
+    Heart,
+    FileCheck,
+    MessageSquare,
+    HelpCircle,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { DashboardHeader } from "@/components/dashboard-header";
@@ -37,37 +37,37 @@ import { AuthProvider, useAuth } from "@/components/auth-provider";
 import React, { useEffect, useTransition } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { startOrGetAdminConversation } from "@/lib/actions";
+import { startOrGetAdminConversation } from "@/lib/client-actions";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
 const executiveSidebarNav = [
-  { title: "Dashboard", href: "/executives/dashboard", icon: LayoutDashboard },
-  { title: "My Profile", href: "/executives/profile/view", icon: User },
-  { title: "Find Opportunities", href: "/executives/opportunities/find", icon: Search },
-  { title: "Saved Opportunities", href: "/executives/saved", icon: Bookmark },
-  { title: "Applications", href: "/executives/applications", icon: Briefcase },
-  { title: "Inbox", href: "/executives/inbox", icon: MessageSquare },
+    { title: "Dashboard", href: "/executives/dashboard", icon: LayoutDashboard },
+    { title: "My Profile", href: "/executives/profile/view", icon: User },
+    { title: "Find Opportunities", href: "/executives/opportunities/find", icon: Search },
+    { title: "Saved Opportunities", href: "/executives/saved", icon: Bookmark },
+    { title: "Applications", href: "/executives/applications", icon: Briefcase },
+    { title: "Inbox", href: "/executives/inbox", icon: MessageSquare },
 ];
 
 const startupSidebarNav = [
-  { title: "Dashboard", href: "/startups/dashboard", icon: LayoutDashboard },
-  { title: "My Profile", href: "/startups/profile/view", icon: UserIcon },
-  { title: "My Needs", href: "/startups/needs", icon: FileText },
-  { title: "Find Talent", href: "/startups/find-talent", icon: Search },
-  { title: "Applicants", href: "/startups/applicants", icon: Users },
-  { title: "Shortlisted", href: "/startups/shortlisted", icon: Star },
-  { title: "Inbox", href: "/startups/inbox", icon: MessageSquare },
+    { title: "Dashboard", href: "/startups/dashboard", icon: LayoutDashboard },
+    { title: "My Profile", href: "/startups/profile/view", icon: UserIcon },
+    { title: "My Needs", href: "/startups/needs", icon: FileText },
+    { title: "Find Talent", href: "/startups/find-talent", icon: Search },
+    { title: "Applicants", href: "/startups/applicants", icon: Users },
+    { title: "Shortlisted", href: "/startups/shortlisted", icon: Star },
+    { title: "Inbox", href: "/startups/inbox", icon: MessageSquare },
 ];
 
 const adminSidebarNav = [
-  { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-  { title: "Users", href: "/admin/users", icon: Users },
-  { title: "Opportunities", href: "/admin/opportunities", icon: Briefcase },
-  { title: "Applications", href: "/admin/applications", icon: FileCheck },
-  { title: "Shortlisted", href: "/admin/shortlisted", icon: Star },
-  { title: "Saved", href: "/admin/saved", icon: Heart },
-  { title: "Inbox", href: "/admin/inbox", icon: MessageSquare },
+    { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+    { title: "Users", href: "/admin/users", icon: Users },
+    { title: "Opportunities", href: "/admin/opportunities", icon: Briefcase },
+    { title: "Applications", href: "/admin/applications", icon: FileCheck },
+    { title: "Shortlisted", href: "/admin/shortlisted", icon: Star },
+    { title: "Saved", href: "/admin/saved", icon: Heart },
+    { title: "Inbox", href: "/admin/inbox", icon: MessageSquare },
 ];
 
 const headerInfo: Record<string, { title: string, tagline: string }> = {
@@ -106,15 +106,15 @@ const headerInfo: Record<string, { title: string, tagline: string }> = {
 };
 
 function LoadingState() {
-  return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <Logo />
-        <Skeleton className="h-8 w-48 mt-4" />
-        <Skeleton className="h-4 w-64" />
-      </div>
-    </div>
-  );
+    return (
+        <div className="flex h-screen items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+                <Logo />
+                <Skeleton className="h-8 w-48 mt-4" />
+                <Skeleton className="h-4 w-64" />
+            </div>
+        </div>
+    );
 }
 
 function AccessDeniedMessage({ userRole }: { userRole: string | null }) {
@@ -177,85 +177,109 @@ function SupportButton() {
 
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { user, userDetails, loading: authLoading } = useAuth();
-  
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-    }
-  }, [authLoading, user, router]);
+    const pathname = usePathname();
+    const router = useRouter();
+    const { user, userDetails, loading: authLoading, refetchUserDetails, refetchUnreadCount, unreadMessageCount } = useAuth();
 
-  if (authLoading || !user || !userDetails || !userDetails.role) {
-    return <LoadingState />;
-  }
-
-  const rolePath = pathname.split('/')[1];
-  const userRole = userDetails.role;
-  const isAccessDenied = rolePath !== `${userRole}s` && rolePath !== userRole;
-  
-  const isExecutive = userDetails?.role === 'executive';
-  const isStartup = userDetails?.role === 'startup';
-  const isAdmin = userDetails?.role === 'admin';
-
-  let navItems = startupSidebarNav;
-  if (isExecutive) navItems = executiveSidebarNav;
-  if (isAdmin) navItems = adminSidebarNav;
-  
-  const themeClass = isExecutive ? 'theme-blue' : isAdmin ? 'theme-gray' : 'theme-orange';
-
-  const getActiveState = (href: string) => {
-    if (href.endsWith('/view') || href.endsWith('/find')) {
-        return pathname.startsWith(href.split('/').slice(0, -1).join('/'));
-    }
-    if (href.includes('/opportunities/') || href.includes('/candidates/') || href.includes('/applicants') || href.includes('/inbox')) {
-        return pathname.startsWith(href);
-    }
-    return pathname === href;
-  };
-  
-  const currentHeader = Object.entries(headerInfo).find(([path,]) => {
-      if (pathname.match(/\/startups\/(needs|applicants|candidates|shortlisted|profile|inbox)\/edit\/(.+)/) || pathname.match(/\/executives\/(opportunities|inbox)\/(.+)/) || pathname.match(/\/startups\/candidates\/(.+)/) || pathname.match(/\/admin\/(inbox)\/(.+)/)) {
-        const pathSegments = path.split('/');
-        const pathnameSegments = pathname.split('/');
-        if (pathSegments.length < pathnameSegments.length && path.split(/[\/\[]/)[2] === pathname.split(/[\/\[]/)[2] ) {
-            return true;
+    useEffect(() => {
+        if (!authLoading && !user) {
+            router.push('/login');
         }
-      }
-      return pathname === path;
-  })?.[1]
-    || { title: 'Dashboard', tagline: 'Welcome' };
+    }, [authLoading, user, router]);
+
+    if (authLoading || !user || !userDetails || !userDetails.role) {
+        // Show a minimal loading / sign-in redirect placeholder when auth is not ready
+        if (authLoading || !user) {
+            return (
+                <div className="flex h-screen items-center justify-center">
+                    <div className="flex flex-col items-center gap-4">
+                        <Logo />
+                        <div className="max-w-xl p-4 bg-card rounded-md shadow">
+                            <p className="text-sm text-muted-foreground">Checking authentication...</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        // If user is present but userDetails missing, show access denied placeholder (quiet)
+        return (
+            <div className="flex h-screen items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <Logo />
+                    <div className="max-w-xl p-4 bg-card rounded-md shadow">
+                        <h3 className="font-medium">Profile loading</h3>
+                        <p className="text-sm text-muted-foreground">We are loading your profile. If this persists, please refresh the page.</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    const rolePath = pathname.split('/')[1];
+    const userRole = userDetails.role;
+    const isAccessDenied = rolePath !== `${userRole}s` && rolePath !== userRole;
+
+    const isExecutive = userDetails?.role === 'executive';
+    const isStartup = userDetails?.role === 'startup';
+    const isAdmin = userDetails?.role === 'admin';
+
+    let navItems = startupSidebarNav;
+    if (isExecutive) navItems = executiveSidebarNav;
+    if (isAdmin) navItems = adminSidebarNav;
+
+    const themeClass = isExecutive ? 'theme-blue' : isAdmin ? 'theme-gray' : 'theme-orange';
+
+    const getActiveState = (href: string) => {
+        if (href.endsWith('/view') || href.endsWith('/find')) {
+            return pathname.startsWith(href.split('/').slice(0, -1).join('/'));
+        }
+        if (href.includes('/opportunities/') || href.includes('/candidates/') || href.includes('/applicants') || href.includes('/inbox')) {
+            return pathname.startsWith(href);
+        }
+        return pathname === href;
+    };
+
+    const currentHeader = Object.entries(headerInfo).find(([path,]) => {
+        if (pathname.match(/\/startups\/(needs|applicants|candidates|shortlisted|profile|inbox)\/edit\/(.+)/) || pathname.match(/\/executives\/(opportunities|inbox)\/(.+)/) || pathname.match(/\/startups\/candidates\/(.+)/) || pathname.match(/\/admin\/(inbox)\/(.+)/)) {
+            const pathSegments = path.split('/');
+            const pathnameSegments = pathname.split('/');
+            if (pathSegments.length < pathnameSegments.length && path.split(/[\/\[]/)[2] === pathname.split(/[\/\[]/)[2]) {
+                return true;
+            }
+        }
+        return pathname === path;
+    })?.[1]
+        || { title: 'Dashboard', tagline: 'Welcome' };
 
 
-  return (
-      <div className={`${themeClass} h-full flex flex-col`}>
+    return (
+        <div className={`${themeClass} h-full flex flex-col`}>
             <SidebarProvider>
                 {!isAccessDenied && (
                     <Sidebar>
                         <SidebarHeader className="h-24 flex items-center p-4 border-b">
-                        <Link href="/">
-                            <Logo />
-                        </Link>
+                            <Link href="/">
+                                <Logo />
+                            </Link>
                         </SidebarHeader>
                         <SidebarContent className="p-2 mt-8">
                             {navItems.map((item) => (
-                            <Button
-                                key={item.title}
-                                variant={getActiveState(item.href) ? "secondary" : "ghost"}
-                                className="w-full justify-start"
-                                asChild
-                            >
-                                <Link href={item.href}>
-                                <item.icon className="mr-2 h-4 w-4" />
-                                {item.title}
-                                </Link>
-                            </Button>
+                                <Button
+                                    key={item.title}
+                                    variant={getActiveState(item.href) ? "secondary" : "ghost"}
+                                    className="w-full justify-start"
+                                    asChild
+                                >
+                                    <Link href={item.href}>
+                                        <item.icon className="mr-2 h-4 w-4" />
+                                        {item.title}
+                                    </Link>
+                                </Button>
                             ))}
                         </SidebarContent>
                         <SidebarFooter>
-                        <Separator className="my-2" />
-                        {!isAdmin && <SupportButton />}
+                            <Separator className="my-2" />
+                            {!isAdmin && <SupportButton />}
                         </SidebarFooter>
                     </Sidebar>
                 )}
@@ -268,22 +292,22 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                         {isAccessDenied ? (
                             <AccessDeniedMessage userRole={userRole} />
                         ) : (
-                             <div className="p-4 md:p-8">
-                                 {children}
+                            <div className="p-4 md:p-8">
+                                {children}
                             </div>
                         )}
                     </main>
                 </SidebarInset>
             </SidebarProvider>
-      </div>
-  );
+        </div>
+    );
 }
 
 
 export default function DashboardLayout({
-  children,
+    children,
 }: {
-  children: React.ReactNode;
+    children: React.ReactNode;
 }) {
     return (
         <AuthProvider>

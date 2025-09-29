@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SenseiSeek API — Swagger UI</title>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@4.18.3/swagger-ui.css" />
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+        }
+
+        #swagger {
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="swagger"></div>
+
+    <script src="https://unpkg.com/swagger-ui-dist@4.18.3/swagger-ui-bundle.js"></script>
+    <script>
+        // Prefer the static openapi.json located at /openapi.json
+        const specUrl = '/openapi.json';
+
+        window.onload = () => {
+            const ui = SwaggerUIBundle({
+                url: specUrl,
+                dom_id: '#swagger',
+                deepLinking: true,
+                presets: [SwaggerUIBundle.presets.apis],
+                layout: 'BaseLayout',
+            });
+            window.ui = ui;
+        };
+    </script>
+</body>
+
+</html>

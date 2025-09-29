@@ -1,0 +1,1197 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "SenseiSeek API",
+    "version": "1.1.0"
+  },
+  "security": [
+    {
+      "cookieAuth": []
+    }
+  ],
+  "paths": {
+    "/api/users/me": {
+      "get": {
+        "summary": "Get current authenticated user"
+      }
+    },
+    "/api/users/{id}": {
+      "get": {
+        "summary": "Get public user profile by id"
+      }
+    },
+    "/api/auth/session": {
+      "post": {
+        "summary": "Create session cookie from ID token",
+        "security": []
+      },
+      "delete": {
+        "summary": "Clear session cookie",
+        "security": []
+      }
+    },
+    "/api/auth/signup": {
+      "post": {
+        "summary": "Create a new user account (email/password)",
+        "requestBody": {
+          "description": "Signup payload",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Signup"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/auth/oauth-signup": {
+      "post": {
+        "summary": "Complete OAuth signup flow (GitHub/Microsoft)",
+        "security": []
+      }
+    },
+    "/api/github/insights": {
+      "post": {
+        "summary": "Fetch GitHub insights for a handle or repo (auth required)"
+      }
+    },
+    "/api/embeddings/upsert": {
+      "post": {
+        "summary": "Compute and upsert embedding for a resource (admin or background)"
+      }
+    },
+    "/api/matching/backfill/missing": {
+      "post": {
+        "summary": "List missing embeddings for backfill (admin)"
+      }
+    },
+    "/api/matching/backfill/fill": {
+      "post": {
+        "summary": "Compute & persist embeddings for provided ids (admin)"
+      }
+    },
+    "/api/matching/cache/{id}": {
+      "get": {
+        "summary": "Read matching cache entry by id"
+      }
+    },
+    "/api/matching/recompute": {
+      "post": {
+        "summary": "Enqueue a recompute job for matching cache (admin)"
+      }
+    },
+    "/api/matching/mark-dirty": {
+      "post": {
+        "summary": "Mark matching cache entries dirty by id or tag (admin)"
+      }
+    },
+    "/api/matching/worker/enqueue": {
+      "post": {
+        "summary": "Enqueue worker job (admin)"
+      }
+    },
+    "/api/matching/worker/run": {
+      "post": {
+        "summary": "Trigger a one-shot worker run (admin)"
+      }
+    },
+    "/api/startups/needs": {
+      "get": {
+        "summary": "List needs or filter by creatorId"
+      },
+      "post": {
+        "summary": "Create a startup need",
+        "requestBody": {
+          "description": "Startup need payload",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartupNeeds"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/startups/needs/{id}": {
+      "get": {
+        "summary": "Get a startup need"
+      },
+      "put": {
+        "summary": "Update a startup need",
+        "requestBody": {
+          "description": "Startup need update payload",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartupNeeds"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a startup need"
+      }
+    },
+    "/api/executives": {
+      "post": {
+        "summary": "Create or update executive profile",
+        "requestBody": {
+          "description": "Executive profile payload",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecutiveProfile"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/executives/list": {
+      "get": {
+        "summary": "List executive profiles (optionally filter)"
+      }
+    },
+    "/api/executives/find": {
+      "get": {
+        "summary": "Find executives (search)"
+      }
+    },
+    "/api/executives/{id}": {
+      "get": {
+        "summary": "Get executive profile by id"
+      }
+    },
+    "/api/executives/{id}/apply": {
+      "post": {
+        "summary": "Apply for opportunity as executive"
+      }
+    },
+    "/api/executives/{id}/saved": {
+      "get": {
+        "summary": "List saves for executive"
+      }
+    },
+    "/api/conversations": {
+      "post": {
+        "summary": "Start a conversation or return existing"
+      },
+      "get": {
+        "summary": "List conversations for a user"
+      }
+    },
+    "/api/conversations/{conversationId}/messages": {
+      "get": {
+        "summary": "Get messages for conversation"
+      },
+      "post": {
+        "summary": "Send a message in a conversation"
+      }
+    },
+    "/api/conversations/{conversationId}/read": {
+      "post": {
+        "summary": "Mark conversation as read"
+      }
+    },
+    "/api/messages/initial": {
+      "post": {
+        "summary": "Generate initial introduction message (AI)",
+        "requestBody": {
+          "description": "Initial message payload",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageInitial"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/messages/followup": {
+      "post": {
+        "summary": "Generate follow-up message (AI)",
+        "requestBody": {
+          "description": "Follow-up message payload",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageFollowup"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/applications": {
+      "get": {
+        "summary": "List applications (filter by executiveId or startupId)"
+      },
+      "post": {
+        "summary": "Create an application"
+      }
+    },
+    "/api/applications/{applicationId}": {
+      "patch": {
+        "summary": "Update application status",
+        "requestBody": {
+          "description": "Application status update",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationStatusUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "summary": "Get application"
+      }
+    },
+    "/api/shortlist": {
+      "post": {
+        "summary": "Toggle shortlist for an executive",
+        "requestBody": {
+          "description": "Shortlist toggle payload",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShortlistToggle"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/saved": {
+      "post": {
+        "summary": "Toggle saved opportunity",
+        "requestBody": {
+          "description": "Saved toggle payload",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavedToggle"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "summary": "List saved opportunities"
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "summary": "List users (admin)"
+      }
+    },
+    "/api/admin/promote": {
+      "post": {
+        "summary": "Promote a user to admin by email",
+        "requestBody": {
+          "description": "Promote payload",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminPromote"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/admin/opportunities": {
+      "get": {
+        "summary": "List all opportunities (admin)"
+      }
+    },
+    "/api/admin/applications": {
+      "get": {
+        "summary": "List all applications (admin)"
+      }
+    },
+    "/api/admin/broadcast": {
+      "post": {
+        "summary": "Broadcast message to all users (admin)",
+        "requestBody": {
+          "description": "Broadcast payload",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminBroadcast"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/admin/conversations/start": {
+      "post": {
+        "summary": "Start an admin conversation with a user"
+      }
+    },
+    "/api/admin/saved": {
+      "get": {
+        "summary": "Admin: list saved items"
+      }
+    },
+    "/api/dashboard/executive/{executiveId}": {
+      "get": {
+        "summary": "Get executive dashboard stats"
+      }
+    },
+    "/api/dashboard/startup/{startupId}": {
+      "get": {
+        "summary": "Get startup dashboard stats"
+      }
+    },
+    "/api/dashboard/admin/{adminId}": {
+      "get": {
+        "summary": "Admin dashboard stats"
+      }
+    },
+    "/api/ai/parse-resume": {
+      "post": {
+        "summary": "Parse resume text to extract profile fields",
+        "requestBody": {
+          "description": "Parse resume payload",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParseResume"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/ai/rewrite-field": {
+      "post": {
+        "summary": "Rewrite a field using GenKit flows"
+      }
+    },
+    "/api/ai/rewrite-executive": {
+      "post": {
+        "summary": "Rewrite executive profile field"
+      }
+    },
+    "/api/ai/rewrite-startup": {
+      "post": {
+        "summary": "Rewrite startup profile field"
+      }
+    },
+    "/api/ai/rewrite-job-description": {
+      "post": {
+        "summary": "Rewrite job description field"
+      }
+    },
+    "/api/ai/rewrite-message": {
+      "post": {
+        "summary": "Rewrite message text"
+      }
+    },
+    "/api/ai/generate-status-change": {
+      "post": {
+        "summary": "Generate a status-change message (AI)"
+      }
+    },
+    "/api/help-content": {
+      "get": {
+        "summary": "Serve docs/HELP.md",
+        "security": []
+      }
+    },
+    "/api/openapi": {
+      "get": {
+        "summary": "Serve openapi.json",
+        "security": []
+      }
+    },
+    "/api/vector/test": {
+      "get": {
+        "summary": "Vector DB test endpoint (internal)"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ExecutiveProfile": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2
+          },
+          "photoUrl": {
+            "type": "string"
+          },
+          "githubHandle": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "not": {}
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "type": "string",
+                "const": ""
+              }
+            ]
+          },
+          "githubInsights": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "not": {}
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "type": "string",
+                "const": ""
+              }
+            ]
+          },
+          "expertise": {
+            "type": "string",
+            "minLength": 50
+          },
+          "industryExperience": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 12
+          },
+          "availability": {
+            "type": "string",
+            "minLength": 1
+          },
+          "desiredCompensation": {
+            "type": "string",
+            "minLength": 1
+          },
+          "locationPreference": {
+            "type": "string",
+            "minLength": 1
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "keyAccomplishments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "minLength": 25
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "linkedinProfile": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string",
+                        "format": "uri"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "const": ""
+                  }
+                ]
+              },
+              "personalWebsite": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string",
+                        "format": "uri"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "const": ""
+                  }
+                ]
+              },
+              "portfolio": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string",
+                        "format": "uri"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "const": ""
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "resumeText": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "expertise",
+          "industryExperience",
+          "availability",
+          "desiredCompensation",
+          "locationPreference",
+          "keyAccomplishments"
+        ],
+        "additionalProperties": false
+      },
+      "StartupProfile": {
+        "type": "object",
+        "properties": {
+          "userName": {
+            "type": "string",
+            "minLength": 2
+          },
+          "userEmail": {
+            "type": "string",
+            "format": "email"
+          },
+          "yourRole": {
+            "type": "string",
+            "minLength": 2
+          },
+          "companyName": {
+            "type": "string",
+            "minLength": 2
+          },
+          "companyWebsite": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "not": {}
+                  },
+                  {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                ]
+              },
+              {
+                "type": "string",
+                "const": ""
+              }
+            ]
+          },
+          "companyLogoUrl": {
+            "type": "string"
+          },
+          "industry": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "investmentStage": {
+            "type": "string"
+          },
+          "investmentRaised": {
+            "type": "string"
+          },
+          "largestInvestor": {
+            "type": "string"
+          },
+          "shortDescription": {
+            "type": "string",
+            "minLength": 50
+          },
+          "currentChallenge": {
+            "type": "string",
+            "minLength": 50
+          },
+          "whyUs": {
+            "type": "string",
+            "minLength": 50
+          }
+        },
+        "required": [
+          "userName",
+          "userEmail",
+          "yourRole",
+          "companyName",
+          "industry",
+          "shortDescription",
+          "currentChallenge",
+          "whyUs"
+        ],
+        "additionalProperties": false
+      },
+      "StartupNeeds": {
+        "type": "object",
+        "properties": {
+          "companyName": {
+            "type": "string",
+            "minLength": 2
+          },
+          "companyStage": {
+            "type": "string",
+            "minLength": 1
+          },
+          "roleTitle": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50
+          },
+          "roleSummary": {
+            "type": "string",
+            "minLength": 50
+          },
+          "keyDeliverables": {
+            "type": "string",
+            "minLength": 50
+          },
+          "keyChallenges": {
+            "type": "string"
+          },
+          "requiredExpertise": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "engagementLength": {
+            "type": "string",
+            "minLength": 1
+          },
+          "budget": {
+            "type": "string",
+            "minLength": 1
+          },
+          "locationPreference": {
+            "type": "string",
+            "minLength": 1
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "companyWebsite": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string",
+                        "format": "uri"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "const": ""
+                  }
+                ]
+              },
+              "jobPosting": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string",
+                        "format": "uri"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "const": ""
+                  }
+                ]
+              },
+              "linkedinProfile": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "type": "string",
+                        "format": "uri"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "const": ""
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive"
+            ],
+            "default": "active"
+          },
+          "creatorId": {
+            "type": "string"
+          },
+          "projectScope": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "companyName",
+          "companyStage",
+          "roleTitle",
+          "roleSummary",
+          "keyDeliverables",
+          "requiredExpertise",
+          "engagementLength",
+          "budget",
+          "locationPreference"
+        ],
+        "additionalProperties": false
+      },
+      "Signup": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          },
+          "confirmPassword": {
+            "type": "string",
+            "minLength": 8
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "startup",
+              "executive"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "password",
+          "confirmPassword",
+          "role"
+        ],
+        "additionalProperties": false
+      },
+      "ContactForm": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 5
+          },
+          "message": {
+            "type": "string",
+            "minLength": 20
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "subject",
+          "message"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "ShortlistToggle": {
+      "type": "object",
+      "properties": {
+        "startupId": {
+          "type": "string"
+        },
+        "executiveId": {
+          "type": "string"
+        },
+        "shortlist": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "startupId",
+        "executiveId",
+        "shortlist"
+      ]
+    },
+    "SavedToggle": {
+      "type": "object",
+      "properties": {
+        "executiveId": {
+          "type": "string"
+        },
+        "startupNeedId": {
+          "type": "string"
+        },
+        "save": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "executiveId",
+        "startupNeedId",
+        "save"
+      ]
+    },
+    "MessageInitial": {
+      "type": "object",
+      "properties": {
+        "startupId": {
+          "type": "string"
+        },
+        "executiveId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "startupId",
+        "executiveId"
+      ]
+    },
+    "MessageFollowup": {
+      "type": "object",
+      "properties": {
+        "executiveId": {
+          "type": "string"
+        },
+        "needId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "executiveId",
+        "needId"
+      ]
+    },
+    "ApplicationStatusUpdate": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "sendMessage": {
+          "type": "boolean"
+        },
+        "messageContent": {
+          "type": "string",
+          "nullable": true
+        },
+        "startupId": {
+          "type": "string",
+          "nullable": true
+        },
+        "executiveId": {
+          "type": "string",
+          "nullable": true
+        }
+      },
+      "required": [
+        "status"
+      ]
+    },
+    "AdminPromote": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email"
+        }
+      },
+      "required": [
+        "email"
+      ]
+    },
+    "AdminBroadcast": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "message"
+      ]
+    },
+    "ParseResume": {
+      "type": "object",
+      "properties": {
+        "resume": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "resume"
+      ]
+    },
+    "GithubInsightsRequest": {
+      "type": "object",
+      "properties": {
+        "repo": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "repo"
+      ]
+    },
+    "ApplyPayload": {
+      "type": "object",
+      "properties": {
+        "needId": {
+          "type": "string"
+        },
+        "executiveId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "needId",
+        "executiveId"
+      ]
+    },
+    "ConversationStart": {
+      "type": "object",
+      "properties": {
+        "initiator": {
+          "type": "string"
+        },
+        "startupId": {
+          "type": "string",
+          "nullable": true
+        },
+        "executiveId": {
+          "type": "string",
+          "nullable": true
+        },
+        "initialMessage": {
+          "type": "string",
+          "nullable": true
+        },
+        "admin": {
+          "type": "boolean",
+          "nullable": true
+        },
+        "userId": {
+          "type": "string",
+          "nullable": true
+        },
+        "guestName": {
+          "type": "string",
+          "nullable": true
+        }
+      }
+    },
+    "EmbeddingUpsert": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "user",
+            "job"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "type"
+      ]
+    },
+    "MarkDirtyPayload": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        }
+      }
+    },
+    "RecomputePayload": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "session"
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

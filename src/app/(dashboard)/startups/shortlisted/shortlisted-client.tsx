@@ -1,15 +1,17 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { getShortlistedExecutivesForStartup } from '@/lib/actions';
+import { getShortlistedExecutivesForStartup } from '@/lib/client-actions';
+import { toggleShortlistExecutive } from '@/lib/client-actions';
 import type { ExecutiveProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, Info, User, Star, Clock, FileCheck } from 'lucide-react';
+import { Loader2, Info, Star, Clock, FileCheck, User } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/components/auth-provider';
 import { formatDistanceToNow } from 'date-fns';
@@ -19,34 +21,65 @@ import { PaginationControls } from '@/components/ui/pagination';
 const CARDS_PER_PAGE = 12;
 
 const getInitials = (name: string | null | undefined) => {
-    if (!name) return "";
-    const names = name.split(' ');
-    if (names.length > 1 && names[0] && names[1]) {
-      return `${names[0][0]}${names[1][0]}`;
-    }
-    if (name) {
-      return name.substring(0, 2);
-    }
-    return "";
+  if (!name) return "";
+  const names = name.split(' ');
+  if (names.length > 1 && names[0] && names[1]) {
+    return `${names[0][0]}${names[1][0]}`;
+  }
+  if (name) {
+    return name.substring(0, 2);
+  }
+  return "";
 };
 
 const MatchScoreIndicator = ({ score }: { score: number | undefined }) => {
-    if (score === undefined) return null;
-    const scorePercentage = score * 100;
-    let colorClass = 'bg-red-500';
-    if (score > 0.75) colorClass = 'bg-green-500';
-    else if (score > 0.5) colorClass = 'bg-yellow-500';
-    
-    return (
-        <div>
-            <p className="text-xs font-medium text-muted-foreground mb-1">Best Match Score</p>
-            <div className="flex items-center gap-2">
-                <Progress value={scorePercentage} indicatorClassName={colorClass} className="h-2" />
-                <span className="text-sm font-semibold">{Math.round(scorePercentage)}%</span>
-            </div>
-        </div>
-    )
+  if (score === undefined) return null;
+  const scorePercentage = score * 100;
+  let colorClass = 'bg-red-500';
+  if (score > 0.75) colorClass = 'bg-green-500';
+  else if (score > 0.5) colorClass = 'bg-yellow-500';
+
+  return (
+    <div>
+      <p className="text-xs font-medium text-muted-foreground mb-1">Best Match Score</p>
+      <div className="flex items-center gap-2">
+        <Progress value={scorePercentage} indicatorClassName={colorClass} className="h-2" />
+        <span className="text-sm font-semibold">{Math.round(scorePercentage)}%</span>
+      </div>
+    </div>
+  )
 }
+
+const SmallShortlistButton = ({ startupId, executiveId, onRemoved }: { startupId: string; executiveId: string; onRemoved?: () => void }) => {
+  const { toast } = useToast();
+  const [isPending, startTransition] = useTransition();
+  const [isShortlisted, setIsShortlisted] = useState(true);
+
+  const handleClick = () => {
+    if (!startupId) return;
+    startTransition(async () => {
+      try {
+        const res = await toggleShortlistExecutive(startupId, executiveId, !!isShortlisted);
+        if (res && (res.status === 'success' || res.ok === true || res.newState === 'removed')) {
+          setIsShortlisted(false);
+          toast({ title: 'Removed', description: 'Removed from shortlist.' });
+          if (onRemoved) onRemoved();
+        } else {
+          toast({ title: 'Error', description: res?.message || 'Failed to remove from shortlist', variant: 'destructive' });
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'An unknown error occurred';
+        toast({ title: 'Error', description: message, variant: 'destructive' });
+      }
+    });
+  };
+
+  return (
+    <Button variant="outline" size="icon" onClick={handleClick} disabled={isPending}>
+      {isPending ? <Loader2 className="animate-spin" /> : <Star className={cn("h-4 w-4", isShortlisted && "fill-primary text-primary")} />}
+    </Button>
+  );
+};
 
 
 export function ShortlistedClient() {
@@ -59,8 +92,8 @@ export function ShortlistedClient() {
 
   useEffect(() => {
     if (!user) {
-        setIsLoading(false);
-        return;
+      setIsLoading(false);
+      return;
     }
     async function fetchShortlisted() {
       try {
@@ -80,9 +113,9 @@ export function ShortlistedClient() {
         const message = err instanceof Error ? err.message : 'An unknown error occurred';
         setError(message);
         toast({
-            title: "Error",
-            description: message,
-            variant: "destructive"
+          title: "Error",
+          description: message,
+          variant: "destructive"
         });
       } finally {
         setIsLoading(false);
@@ -90,7 +123,7 @@ export function ShortlistedClient() {
     }
     fetchShortlisted();
   }, [user, toast]);
-  
+
   const totalPages = Math.ceil(profiles.length / CARDS_PER_PAGE);
   const paginatedProfiles = profiles.slice(
     (currentPage - 1) * CARDS_PER_PAGE,
@@ -110,86 +143,91 @@ export function ShortlistedClient() {
   if (error) {
     return <div className="text-center text-destructive py-12">Error: {error}</div>;
   }
-  
+
   if (profiles.length === 0) {
     return (
-        <Card className="text-center">
-             <CardHeader>
-                <Info className="mx-auto h-12 w-12 text-muted-foreground" />
-                <CardTitle>No Shortlisted Candidates Yet</CardTitle>
-                <CardDescription>When you find executives you're interested in, shortlist them to see them here.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Button asChild variant="default">
-                    <Link href="/startups/find-talent">
-                        Find Talent
-                    </Link>
-                </Button>
-            </CardContent>
-        </Card>
-      )
+      <Card className="text-center">
+        <CardHeader>
+          <Info className="mx-auto h-12 w-12 text-muted-foreground" />
+          <CardTitle>No Shortlisted Candidates Yet</CardTitle>
+          <CardDescription>When you find executives you're interested in, shortlist them to see them here.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="default">
+            <Link href="/startups/find-talent">
+              Find Talent
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
     <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {paginatedProfiles.map((profile) => (
-                <Card key={profile.id} className="flex flex-col">
-                     <CardHeader>
-                        <div className="flex items-start justify-between">
-                            <div className='flex items-start gap-4'>
-                                <Avatar className="w-16 h-16 rounded-md">
-                                    <AvatarImage src={profile.photoUrl} className="object-cover" />
-                                    <AvatarFallback className="text-xl rounded-md">{getInitials(profile.name)}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <CardTitle>{profile.name}</CardTitle>
-                                    {(profile as any).appliedToRoleTitle && (
-                                        <Badge variant="outline" className="mt-2 text-xs border-green-500 text-green-700">
-                                            <FileCheck className="mr-1.5 h-3 w-3" />
-                                            Applied
-                                        </Badge>
-                                    )}
-                                </div>
-                            </div>
-                            <Badge variant="outline" className="whitespace-nowrap">
-                                <Star className="w-3 h-3 mr-1.5 fill-amber-400 text-amber-500" />
-                                {profile.shortlistedAt ? formatDistanceToNow(new Date(profile.shortlistedAt), { addSuffix: true }) : 'Recently'}
-                            </Badge>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="flex-grow space-y-4">
-                         <p className="text-sm text-muted-foreground line-clamp-3">{profile.expertise}</p>
-                         <MatchScoreIndicator score={profile.matchScore} />
-                         {(profile as any).appliedToRoleTitle && (
-                            <p className="text-xs text-muted-foreground">
-                                Applied for: <span className="font-medium text-foreground">{(profile as any).appliedToRoleTitle}</span>
-                            </p>
-                         )}
-                         <div className="flex flex-wrap gap-2">
-                            {profile.industryExperience?.slice(0, 4).map((skill: string) => (
-                                <Badge key={skill} variant="secondary">{skill}</Badge>
-                            ))}
-                        </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-end">
-                         <Button asChild>
-                            <Link href={`/startups/candidates/${profile.id}?from=shortlisted`}>
-                                <User className="mr-2 h-4 w-4" />
-                                View Profile
-                            </Link>
-                        </Button>
-                    </CardFooter>
-                </Card>
-            ))}
-        </div>
-         {totalPages > 1 && (
-            <PaginationControls
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-            />
-        )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {paginatedProfiles.map((profile) => (
+          <Card key={profile.id} className="flex flex-col">
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className='flex items-start gap-4'>
+                  <Avatar className="w-16 h-16 rounded-md">
+                    <AvatarImage src={profile.photoUrl} className="object-cover" />
+                    <AvatarFallback className="text-xl rounded-md">{getInitials(profile.name)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <CardTitle>{profile.name}</CardTitle>
+                    {(profile as any).appliedToRoleTitle && (
+                      <Badge variant="outline" className="mt-2 text-xs border-green-500 text-green-700">
+                        <FileCheck className="mr-1.5 h-3 w-3" />
+                        Applied
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <Badge variant="outline" className="whitespace-nowrap">
+                  <Star className="w-3 h-3 mr-1.5 fill-amber-400 text-amber-500" />
+                  {profile.shortlistedAt ? formatDistanceToNow(new Date(profile.shortlistedAt), { addSuffix: true }) : 'Recently'}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-grow space-y-4">
+              <p className="text-sm text-muted-foreground line-clamp-3">{profile.expertise}</p>
+              <MatchScoreIndicator score={profile.matchScore} />
+              {(profile as any).appliedToRoleTitle && (
+                <p className="text-xs text-muted-foreground">
+                  Applied for: <span className="font-medium text-foreground">{(profile as any).appliedToRoleTitle}</span>
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {profile.industryExperience?.slice(0, 4).map((skill: string) => (
+                  <Badge key={skill} variant="secondary">{skill}</Badge>
+                ))}
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-end gap-2">
+              <SmallShortlistButton
+                startupId={user?.uid ?? ''}
+                executiveId={profile.id}
+                onRemoved={() => setProfiles(prev => prev.filter(p => p.id !== profile.id))}
+              />
+              <Button asChild>
+                <Link href={`/startups/candidates/${profile.id}?from=shortlisted`}>
+                  <User className="mr-2 h-4 w-4" />
+                  View Profile
+                </Link>
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+      {totalPages > 1 && (
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
+      )}
     </div>
   );
 }

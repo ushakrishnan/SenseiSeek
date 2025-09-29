@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { getAdminAllSaved } from '@/lib/actions';
+import { getAdminAllSaved } from '@/lib/client-actions';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
@@ -42,7 +42,7 @@ export function SavedClient() {
 
   const filteredData = useMemo(() => {
     if (!searchTerm) return data;
-    return data.filter(item => 
+    return data.filter(item =>
       item.executiveName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.roleTitle.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -53,7 +53,7 @@ export function SavedClient() {
       <CardHeader>
         <CardTitle>All Saved Opportunities</CardTitle>
         <CardDescription>Opportunities saved by executives.</CardDescription>
-        <Input 
+        <Input
           placeholder="Filter by executive or role..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -62,8 +62,8 @@ export function SavedClient() {
       </CardHeader>
       {isLoading ? (
         <div className="text-center py-12">
-            <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
-            <p className="mt-4 text-muted-foreground">Loading saved opportunities...</p>
+          <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
+          <p className="mt-4 text-muted-foreground">Loading saved opportunities...</p>
         </div>
       ) : (
         <Table>

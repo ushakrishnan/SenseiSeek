@@ -2,9 +2,10 @@
 
 "use client";
 
-import React, { useEffect, useState, useTransition, useRef, useActionState } from "react";
+import React, { useEffect, useState, useTransition, useRef } from "react";
 import { useAuth } from "@/components/auth-provider";
-import { getConversationsForUser, getMessagesForConversation, sendMessage, markConversationAsRead, rewriteMessage as rewriteMessageAction, startOrGetAdminConversation } from "@/lib/actions";
+import { getConversationsForUser, getMessagesForConversation, sendMessage, markConversationAsRead, startOrGetAdminConversation } from "@/lib/client-actions";
+import { rewriteMessage as rewriteMessageClient } from "@/lib/client-actions";
 import type { ConversationWithRecipient, Message } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Info, Send, Check, CheckCheck, Wand2, Megaphone, Reply } from "lucide-react";
@@ -24,10 +25,10 @@ const getInitials = (name: string | null | undefined) => {
     if (!name) return "";
     const names = name.split(' ');
     if (names.length > 1 && names[0] && names[1]) {
-      return `${names[0][0]}${names[1][0]}`;
+        return `${names[0][0]}${names[1][0]}`;
     }
     if (name) {
-      return name.substring(0, 2);
+        return name.substring(0, 2);
     }
     return "";
 };
@@ -46,29 +47,39 @@ export function InboxClient({ initialConversationId }: { initialConversationId?:
     const [selectedConversationId, setSelectedConversationId] = useState<string | null>(initialConversationId || null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState("");
-    
+
     const [isLoadingConversations, setIsLoadingConversations] = useState(true);
     const [isLoadingMessages, setIsLoadingMessages] = useState(false);
     const [isSending, startSending] = useTransition();
     const [isRewritePending, startTransition] = useTransition();
 
-    const [rewriteState, rewriteAction] = useActionState(rewriteMessageAction, {status: 'idle', rewrittenText: '', message: ''});
-
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const scrollViewportRef = useRef<HTMLElement | null>(null);
     const firstUnreadRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = (behavior: 'smooth' | 'auto' = 'auto') => {
+        // Prefer explicit viewport scroll if available for more reliable behavior on long threads
+        if (scrollViewportRef.current) {
+            const el = scrollViewportRef.current;
+            el.scrollTo({ top: el.scrollHeight, behavior });
+            return;
+        }
         messagesEndRef.current?.scrollIntoView({ behavior });
     }
 
     useEffect(() => {
-        scrollToBottom();
+        // Wait a tick for layout to settle then scroll
+        const t = setTimeout(() => scrollToBottom('auto'), 50);
         const lastMessage = messages[messages.length - 1];
         if (lastMessage && user && lastMessage.senderId !== user.uid && firstUnreadRef.current) {
-          firstUnreadRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Scroll unread marker into center of viewport
+            if (firstUnreadRef.current) {
+                firstUnreadRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         }
+        return () => clearTimeout(t);
     }, [messages, user]);
-    
+
     const fetchConversations = React.useCallback(async (userId: string) => {
         setIsLoadingConversations(true);
         try {
@@ -93,7 +104,7 @@ export function InboxClient({ initialConversationId }: { initialConversationId?:
         } else {
             setIsLoadingConversations(false);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
     useEffect(() => {
@@ -101,10 +112,10 @@ export function InboxClient({ initialConversationId }: { initialConversationId?:
             const loadAndMarkMessages = async () => {
                 setIsLoadingMessages(true);
                 setMessages([]);
-                
+
                 try {
                     await markConversationAsRead(user.uid, selectedConversationId);
-    
+
                     // Then, refetch everything to update the UI
                     const [messagesResult, conversationsResult, _] = await Promise.all([
                         getMessagesForConversation(selectedConversationId, user.uid),
@@ -122,16 +133,16 @@ export function InboxClient({ initialConversationId }: { initialConversationId?:
                         setConversations(conversationsResult.conversations);
                     }
                 } catch (e: any) {
-                     console.error("Error marking conversation as read:", e);
+                    console.error("Error marking conversation as read:", e);
                     toast({ title: "Error", description: e.message, variant: "destructive" });
                 } finally {
                     setIsLoadingMessages(false);
                 }
             };
-            
+
             loadAndMarkMessages();
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedConversationId, user, toast]);
 
     const handleSendMessage = async () => {
@@ -149,7 +160,7 @@ export function InboxClient({ initialConversationId }: { initialConversationId?:
                 isReadByRecipient: false,
                 isBroadcast: false,
             };
-            
+
             setMessages(prev => [...prev, optimisticMessage]);
             scrollToBottom('smooth');
             const messageToSend = newMessage;
@@ -160,30 +171,51 @@ export function InboxClient({ initialConversationId }: { initialConversationId?:
                 senderId: user.uid,
                 text: messageToSend,
             });
-
             if (result.status === 'error') {
                 toast({ title: "Message failed to send", description: result.message, variant: 'destructive' });
                 setMessages(prev => prev.filter(m => m.id !== tempId));
                 setNewMessage(messageToSend); // Restore text
             } else {
-                 if(user) {
-                     if (analytics) {
+                try {
+                    // Refresh messages from server so we have canonical IDs and read states
+                    const messagesResult = await getMessagesForConversation(selectedConversationId, user.uid);
+                    if (messagesResult.status === 'success' && messagesResult.messages) {
+                        setMessages(messagesResult.messages);
+                        // Ensure viewport scrolls to the latest message
+                        setTimeout(() => scrollToBottom('smooth'), 50);
+                    }
+                } catch (e) {
+                    // ignore — we already optimistically showed the message
+                }
+
+                if (user) {
+                    if (analytics) {
                         logEvent(analytics, 'share', {
                             method: 'inbox',
                             content_type: 'message',
                             item_id: selectedConversationId,
                         });
                     }
-                     fetchConversations(user.uid);
-                 }
+                    fetchConversations(user.uid);
+                }
             }
         });
     }
 
     const handleRewrite = () => {
         if (!newMessage.trim()) return;
-        startTransition(() => {
-            rewriteAction({ currentValue: newMessage });
+        startTransition(async () => {
+            try {
+                const result = await rewriteMessageClient({ currentValue: newMessage });
+                if (result.status === 'success' && result.rewrittenText) {
+                    setNewMessage(result.rewrittenText);
+                    toast({ title: 'Message Rewritten', description: 'Your message has been enhanced by AI.' });
+                } else {
+                    toast({ title: 'Error', description: result.message || 'Failed to rewrite message', variant: 'destructive' });
+                }
+            } catch (e: any) {
+                toast({ title: 'Error', description: e?.message || 'Unknown error', variant: 'destructive' });
+            }
         })
     }
 
@@ -198,15 +230,8 @@ export function InboxClient({ initialConversationId }: { initialConversationId?:
         }
     };
 
-    useEffect(() => {
-        if (rewriteState.status === 'success' && rewriteState.rewrittenText) {
-            setNewMessage(rewriteState.rewrittenText);
-            toast({ title: 'Message Rewritten', description: 'Your message has been enhanced by AI.' });
-        } else if (rewriteState.status === 'error') {
-            toast({ title: 'Error', description: rewriteState.message, variant: 'destructive' });
-        }
-    }, [rewriteState, toast]);
-    
+    // rewrite side-effects are now handled inline in handleRewrite
+
     if (isLoadingConversations) {
         return (
             <div className="text-center py-12">
@@ -215,7 +240,7 @@ export function InboxClient({ initialConversationId }: { initialConversationId?:
             </div>
         );
     }
-    
+
     if (conversations.length === 0) {
         return (
             <Card className="text-center py-12">
@@ -227,7 +252,7 @@ export function InboxClient({ initialConversationId }: { initialConversationId?:
             </Card>
         );
     }
-    
+
     const selectedConversation = conversations.find(c => c.id === selectedConversationId);
 
     let firstUnreadIndex = -1;
@@ -241,7 +266,7 @@ export function InboxClient({ initialConversationId }: { initialConversationId?:
 
     return (
         <Card className="h-[calc(100vh-12rem)] overflow-hidden">
-             <ResizablePanelGroup direction="horizontal" className="h-full">
+            <ResizablePanelGroup direction="horizontal" className="h-full">
                 <ResizablePanel defaultSize={30} minSize={20}>
                     <div className="flex flex-col h-full">
                         <div className="p-4 border-b">
@@ -252,8 +277,8 @@ export function InboxClient({ initialConversationId }: { initialConversationId?:
                                 {conversations.map(convo => {
                                     const isUnread = user && convo.unreadCounts && convo.unreadCounts[user.uid] > 0;
                                     return (
-                                        <button 
-                                            key={convo.id} 
+                                        <button
+                                            key={convo.id}
                                             onClick={() => setSelectedConversationId(convo.id)}
                                             className={cn(
                                                 "flex items-center gap-4 p-4 text-left hover:bg-accent",
@@ -274,9 +299,9 @@ export function InboxClient({ initialConversationId }: { initialConversationId?:
                                                     )}
                                                 </div>
                                                 <p className="text-sm text-muted-foreground truncate">
-                                                  {convo.lastMessageText && convo.lastMessageText.length > 30
-                                                      ? `${convo.lastMessageText.substring(0, 30)}...`
-                                                      : convo.lastMessageText}
+                                                    {convo.lastMessageText && convo.lastMessageText.length > 30
+                                                        ? `${convo.lastMessageText.substring(0, 30)}...`
+                                                        : convo.lastMessageText}
                                                 </p>
                                             </div>
                                         </button>
@@ -301,16 +326,24 @@ export function InboxClient({ initialConversationId }: { initialConversationId?:
                                         <p className="text-xs text-muted-foreground">Last message {formatDistanceToNow(new Date(selectedConversation.lastMessageAt), { addSuffix: true })}</p>
                                     </div>
                                 </div>
-                                <ScrollArea className="flex-1 p-6 scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-400 scrollbar-track-gray-200">
+                                <ScrollArea className="flex-1 p-6 scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-400 scrollbar-track-gray-200" ref={(root) => {
+                                    // Find the inner viewport element to control scrolling directly
+                                    try {
+                                        const viewport = root && (root.querySelector('[data-scroll-viewport]') as HTMLElement | null);
+                                        scrollViewportRef.current = viewport || null;
+                                    } catch (e) {
+                                        scrollViewportRef.current = null;
+                                    }
+                                }}>
                                     {isLoadingMessages ? (
                                         <div className="flex items-center justify-center h-full">
-                                            <Loader2 className="h-8 w-8 animate-spin text-primary"/>
+                                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
                                             {messages.map((message, index) => {
-                                                 const showDivider = index === firstUnreadIndex;
-                                                 return (
+                                                const showDivider = index === firstUnreadIndex;
+                                                return (
                                                     <React.Fragment key={message.id}>
                                                         {showDivider && (
                                                             <div ref={firstUnreadRef} className="relative py-2">
@@ -330,7 +363,7 @@ export function InboxClient({ initialConversationId }: { initialConversationId?:
                                                                 message.senderId === user?.uid ? "bg-primary text-primary-foreground" : "bg-secondary"
                                                             )}>
                                                                 <p className="text-sm whitespace-pre-wrap">{message.text}</p>
-                                                                 <div className="flex items-center justify-end gap-1.5 mt-1.5">
+                                                                <div className="flex items-center justify-end gap-1.5 mt-1.5">
                                                                     <span className="text-xs opacity-70">
                                                                         {isToday(new Date(message.createdAt))
                                                                             ? format(new Date(message.createdAt), 'p')
@@ -340,7 +373,7 @@ export function InboxClient({ initialConversationId }: { initialConversationId?:
                                                                         <MessageStatus isRead={message.isReadByRecipient} />
                                                                     )}
                                                                 </div>
-                                                                 {message.isBroadcast && message.senderId !== user?.uid && (
+                                                                {message.isBroadcast && message.senderId !== user?.uid && (
                                                                     <Button variant="ghost" size="sm" className="w-full justify-start mt-2 text-xs h-7" onClick={() => handleReplyToBroadcast(message)}>
                                                                         <Reply className="mr-2 h-3 w-3" />
                                                                         Reply to Support
@@ -358,7 +391,7 @@ export function InboxClient({ initialConversationId }: { initialConversationId?:
                                 {!selectedConversation.isBroadcast && (
                                     <div className="p-4 border-t bg-background">
                                         <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="relative flex items-center gap-2">
-                                            <Textarea 
+                                            <Textarea
                                                 placeholder="Type your message..."
                                                 className="flex-1 pr-20"
                                                 rows={1}
@@ -373,7 +406,7 @@ export function InboxClient({ initialConversationId }: { initialConversationId?:
                                             />
                                             <div className="absolute right-6 flex items-center gap-1">
                                                 <Button type="button" size="icon" variant="ghost" onClick={handleRewrite} disabled={isRewritePending || !newMessage.trim()}>
-                                                    {isRewritePending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4 text-primary"/>}
+                                                    {isRewritePending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4 text-primary" />}
                                                 </Button>
                                                 <Button type="submit" size="icon" disabled={isSending || !newMessage.trim()}>
                                                     {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
