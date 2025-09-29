@@ -133,8 +133,6 @@ Architecture and dataflow (concise):
   - The reranker can be replaced by a learned pairwise model (e.g., a lightweight cross-encoder fine-tuned on labeled pairs) if you need lower-cost repeat inference at scale.
   - The pipeline supports alternate vector stores (the code uses an adapter pattern) and multiple embedding providers.
 
-If you want, I can also add a tiny diagram (ASCII or SVG) and a short checklist of hyperparameters and where to tune them in the codebase (embedding model, PINECONE_INDEX_DIM, MATCH_RERANK_TOP_K, EMBED_BACKFILL_BATCH).
-
 ## Quick update: durable precompute & worker persistence
 
 We now persist a per-startup execVectorScores map to Firestore in `matching-vector-scores/<startupId>` with a TTL and a `dirty` flag. The recompute worker writes these docs after vector queries and after LLM reranks so that multi-instance deployments can share precomputed vector-derived scores. Make sure to wire invalidation (`markStartupVectorScoresDirty`) from startup need and executive profile update flows to avoid stale results.
