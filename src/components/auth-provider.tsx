@@ -4,14 +4,14 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase-client';
-import { getUserDetails, getUnreadMessageCount } from '@/lib/actions';
+import { getUserDetails, getUnreadMessageCount } from '@/lib/client-actions';
 import type { ExecutiveProfile, StartupProfile } from '@/lib/types';
 
 interface UserDetails {
-    role: 'startup' | 'executive' | 'admin' | null;
-    name: string | null;
-    email: string | null;
-    profile: Partial<ExecutiveProfile> | Partial<StartupProfile> | null;
+  role: 'startup' | 'executive' | 'admin' | null;
+  name: string | null;
+  email: string | null;
+  profile: Partial<ExecutiveProfile> | Partial<StartupProfile> | null;
 }
 
 interface AuthContextType {
@@ -28,8 +28,8 @@ const AuthContext = createContext<AuthContextType>({
   userDetails: null,
   unreadMessageCount: 0,
   loading: true,
-  refetchUserDetails: async () => {},
-  refetchUnreadCount: async () => {},
+  refetchUserDetails: async () => { },
+  refetchUnreadCount: async () => { },
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -40,36 +40,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserDetails = useCallback(async (user: User | null) => {
     if (user) {
-        try {
-            const details = await getUserDetails(user.uid);
-            if (details) {
-                setUserDetails(details);
-            } else {
-                 setUserDetails(null);
-            }
-        } catch (error) {
-            console.error("Failed to fetch user details", error);
-            setUserDetails(null);
+      try {
+        const details = await getUserDetails(user.uid);
+        // Server responses are wrapped as { ok: true, data: ... } via jsonOk.
+        // The client helper `unwrapApiResponse` sometimes returns that envelope
+        // directly. Accept both shapes here.
+        if (details && typeof details === 'object' && Object.prototype.hasOwnProperty.call((details as any), 'ok') && (details as any).ok && Object.prototype.hasOwnProperty.call((details as any), 'data')) {
+          // If the server returned the envelope, use the inner data
+          setUserDetails((details as any).data);
+        } else if (details) {
+          setUserDetails(details as any);
+        } else {
+          setUserDetails(null);
         }
-    } else {
+      } catch (error) {
+        console.error("Failed to fetch user details", error);
         setUserDetails(null);
+      }
+    } else {
+      setUserDetails(null);
     }
   }, []);
 
   const fetchUnreadCount = useCallback(async (user: User | null) => {
-      if(user) {
-          try {
-            const result = await getUnreadMessageCount(user.uid);
-            if (result.status === 'success') {
-                setUnreadMessageCount(result.count);
-            }
-          } catch(error) {
-            console.error("Failed to fetch unread message count", error);
-            setUnreadMessageCount(0);
-          }
-      } else {
-          setUnreadMessageCount(0);
+    if (user) {
+      try {
+        const result = await getUnreadMessageCount(user.uid);
+        // fetchUnreadCount result handled silently in production
+        // Accept both envelope { ok: true, data: { count } } and legacy { status:'success', count }
+        if (result && typeof result === 'object' && Object.prototype.hasOwnProperty.call((result as any), 'ok') && (result as any).ok && Object.prototype.hasOwnProperty.call((result as any), 'data')) {
+          setUnreadMessageCount(((result as any).data && (result as any).data.count) || 0);
+        } else if (result && (result as any).status === 'success') {
+          setUnreadMessageCount((result as any).count || 0);
+        }
+      } catch (error) {
+        console.error("Failed to fetch unread message count", error);
+        setUnreadMessageCount(0);
       }
+    } else {
+      setUnreadMessageCount(0);
+    }
   }, []);
 
   const refetchUserDetails = useCallback(async () => {
@@ -87,10 +97,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.debug('[AuthProvider] onAuthStateChanged', { user });
       setUser(user);
       await Promise.all([
-          fetchUserDetails(user),
-          fetchUnreadCount(user)
+        fetchUserDetails(user),
+        fetchUnreadCount(user)
       ]);
       setLoading(false);
     });

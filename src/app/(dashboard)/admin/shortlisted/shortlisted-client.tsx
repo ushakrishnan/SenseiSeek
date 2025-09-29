@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { getAdminAllShortlisted } from '@/lib/actions';
+import { getAdminAllShortlisted } from '@/lib/client-actions';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
@@ -42,7 +42,7 @@ export function ShortlistedClient() {
 
   const filteredData = useMemo(() => {
     if (!searchTerm) return data;
-    return data.filter(item => 
+    return data.filter(item =>
       item.executiveName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.startupName.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -53,7 +53,7 @@ export function ShortlistedClient() {
       <CardHeader>
         <CardTitle>All Shortlisted Candidates</CardTitle>
         <CardDescription>Executives shortlisted by startups.</CardDescription>
-        <Input 
+        <Input
           placeholder="Filter by executive or startup..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -62,36 +62,36 @@ export function ShortlistedClient() {
       </CardHeader>
       {isLoading ? (
         <div className="text-center py-12">
-            <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
-            <p className="mt-4 text-muted-foreground">Loading shortlisted candidates...</p>
+          <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
+          <p className="mt-4 text-muted-foreground">Loading shortlisted candidates...</p>
         </div>
       ) : (
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Executive</TableHead>
-            <TableHead>Shortlisted By (Startup)</TableHead>
-            <TableHead>Date</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredData.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell className="font-medium">
-                 <Link href={`/admin/users?search=${item.executiveName}`} className="text-primary hover:underline">
-                    {item.executiveName}
-                 </Link>
-              </TableCell>
-              <TableCell>
-                <Link href={`/admin/users?search=${item.startupName}`} className="text-primary hover:underline">
-                    {item.startupName}
-                </Link>
-              </TableCell>
-              <TableCell>{format(new Date(item.shortlistedAt), 'PP')}</TableCell>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Executive</TableHead>
+              <TableHead>Shortlisted By (Startup)</TableHead>
+              <TableHead>Date</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {filteredData.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell className="font-medium">
+                  <Link href={`/admin/users?search=${item.executiveName}`} className="text-primary hover:underline">
+                    {item.executiveName}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <Link href={`/admin/users?search=${item.startupName}`} className="text-primary hover:underline">
+                    {item.startupName}
+                  </Link>
+                </TableCell>
+                <TableCell>{format(new Date(item.shortlistedAt), 'PP')}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
     </Card>
   );

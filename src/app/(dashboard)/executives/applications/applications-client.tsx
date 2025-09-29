@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/hooks/use-toast';
-import { getApplications } from '@/lib/actions';
+import { getApplications } from '@/lib/client-actions';
 import type { Application } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -64,22 +64,22 @@ export function ApplicationsClient() {
   if (error) {
     return <div className="text-center text-destructive py-12">Error: {error}</div>;
   }
-  
+
   if (applications.length === 0) {
-      return (
-        <Card className="text-center py-12">
-            <CardHeader>
-                <Info className="mx-auto h-12 w-12 text-muted-foreground" />
-                <CardTitle>No Applications Yet</CardTitle>
-                <CardDescription>You haven't applied to any roles. Find your next opportunity today.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Button asChild>
-                    <Link href="/executives/opportunities/find">Find Opportunities</Link>
-                </Button>
-            </CardContent>
-        </Card>
-      )
+    return (
+      <Card className="text-center py-12">
+        <CardHeader>
+          <Info className="mx-auto h-12 w-12 text-muted-foreground" />
+          <CardTitle>No Applications Yet</CardTitle>
+          <CardDescription>You haven't applied to any roles. Find your next opportunity today.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild>
+            <Link href="/executives/opportunities/find">Find Opportunities</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    )
   }
 
   const statusStyles: { [key: string]: string } = {
@@ -91,45 +91,45 @@ export function ApplicationsClient() {
 
   return (
     <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {paginatedApplications.map((app) => (
-                <Card key={app.id} className="flex flex-col">
-                    <CardHeader>
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <CardTitle>{app.startupNeed.roleTitle}</CardTitle>
-                                <CardDescription className="flex items-center gap-2 pt-1"><Building className="h-4 w-4"/> {app.startupNeed.companyName}</CardDescription>
-                            </div>
-                            <Badge className={cn("capitalize", statusStyles[app.status])}>
-                                {app.status.replace('-', ' ')}
-                            </Badge>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="flex-grow">
-                         <p className="text-sm text-muted-foreground line-clamp-3">{app.startupNeed.roleSummary}</p>
-                    </CardContent>
-                    <CardFooter className="flex justify-between items-center bg-secondary/30 py-3 px-4">
-                        <div className="text-xs text-muted-foreground flex items-center">
-                            <Clock className="h-3 w-3 mr-1.5"/>
-                            Applied {formatDistanceToNow(new Date(app.appliedAt), { addSuffix: true })}
-                        </div>
-                        <Button asChild variant="outline" size="sm">
-                            <Link href={`/executives/opportunities/${app.startupNeed.id}`}>
-                                <Eye className="h-4 w-4 mr-2"/>
-                                View Role
-                            </Link>
-                        </Button>
-                    </CardFooter>
-                </Card>
-            ))}
-        </div>
-        {totalPages > 1 && (
-            <PaginationControls
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-            />
-        )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {paginatedApplications.map((app) => (
+          <Card key={app.id} className="flex flex-col">
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>{app.startupNeed.roleTitle}</CardTitle>
+                  <CardDescription className="flex items-center gap-2 pt-1"><Building className="h-4 w-4" /> {app.startupNeed.companyName}</CardDescription>
+                </div>
+                <Badge className={cn("capitalize", statusStyles[app.status])}>
+                  {app.status.replace('-', ' ')}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-grow">
+              <p className="text-sm text-muted-foreground line-clamp-3">{app.startupNeed.roleSummary}</p>
+            </CardContent>
+            <CardFooter className="flex justify-between items-center bg-secondary/30 py-3 px-4">
+              <div className="text-xs text-muted-foreground flex items-center">
+                <Clock className="h-3 w-3 mr-1.5" />
+                Applied {formatDistanceToNow(new Date(app.appliedAt), { addSuffix: true })}
+              </div>
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/executives/opportunities/${app.startupNeed.id}`}>
+                  <Eye className="h-4 w-4 mr-2" />
+                  View Role
+                </Link>
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+      {totalPages > 1 && (
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
+      )}
     </div>
   );
 }

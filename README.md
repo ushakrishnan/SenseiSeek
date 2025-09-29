@@ -1,8 +1,11 @@
-# Sensei Seek: Fractional Executive Marketplace (Proprietary)
 
-Sensei Seek is a commercial, proprietary marketplace platform that connects high-growth startups with experienced executives for fractional, interim, or advisory roles. This repository contains proprietary source code and is not open source.
-+
-Notice: This code is proprietary. You may not copy, distribute, publish, or use this software except as permitted by a separate written license from the owner. For licensing and commercial inquiries, contact: `ushapriya.krishnan@gmail.com`.
+# Sensei Seek: Fractional Executive Marketplace
+
+[![License: MIT](/assets/badges/license.svg)](./LICENSE) [![Code of Conduct](/assets/badges/coc.svg)](./CODE_OF_CONDUCT.md) [![Tech: Next.js](/assets/badges/nextjs.svg)](https://nextjs.org) [![Tech: TypeScript](/assets/badges/typescript.svg)](https://www.typescriptlang.org) [![Tech: Pinecone](/assets/badges/pinecone.svg)](https://www.pinecone.io) [![Tech: Firebase](/assets/badges/firebase.svg)](https://firebase.google.com)
+
+Sensei Seek is now an open-source educational project aimed at helping developers, researchers, and product teams learn about building an AI-assisted marketplace. This repository contains the application code, documentation, and scripts needed to run, evaluate, and extend the matching pipeline, embedding backfill, and admin tooling.
+
+We welcome contributions, bug reports, and constructive feedback. Read the short contribution notes below and follow the Code of Conduct when participating in the project.
 
 ---
 
@@ -12,215 +15,129 @@ Notice: This code is proprietary. You may not copy, distribute, publish, or use 
 - AI-Powered Matching: Intelligently matches executives to startup needs based on skills, experience, and company fit.
 - AI-Assisted Content Generation: Leverages generative AI to help users craft compelling profiles, job descriptions, and initial outreach messages.
 - Comprehensive Profiles: Startups can showcase their mission and funding, while executives can detail their expertise and accomplishments.
-+
----
 
-## Internal Setup (for authorized users)
+## Tech stack
 
-This section is intended for internal developers or licensed users who have been granted access. If you don't have an authorized license or written permission, do not use or distribute this code.
-+
+- Next.js (App Router) + React + TypeScript
+- Firebase (Auth, Firestore) for backend services and session management
+- Pinecone for vector storage and ANN retrieval (adapter in `src/lib/vector-db.ts`)
+- Embedding provider: configurable via `EMBEDDING_API_URL` / `EMBEDDING_API_KEY` with a deterministic fallback
+- LLM flows (GenKit / configurable provider) for reranking and rationale generation
+- Vitest for tests
+- Tailwind CSS + component UI primitives for the frontend
+- Scripts for backfilling embeddings and querying Pinecone (`scripts/backfill-embeddings.js`, `scripts/pinecone-query.js`)
 
-### Step 1: Obtain Access
+### Where to tune (quick links)
 
-Contact `ushakrishnan@example.com` to request access and licensing information. Once approved, you will receive instructions for secure access and required environment variables.
-+
+If you want to adjust matching behavior or resource/cost trade-offs, these are the main knobs and where to find them:
 
-### Step 2: Install Dependencies
-+
+- Embedding model & dimension
+  - Env vars: `EMBEDDING_API_URL`, `EMBEDDING_API_KEY`, `EMBEDDING_MODEL`, `PINECONE_INDEX_DIM`
+  - Code: `src/lib/embeddings.ts`
 
-Install the necessary npm packages (run in project root):
-+
+- Vector DB / Pinecone
+  - Env vars: `PINECONE_API_KEY`, `PINECONE_ENV`, `PINECONE_INDEX_NAME`, or `PINECONE_BASE_URL`
+  - Code: `src/lib/vector-db.ts`
 
-```powershell
-npm install
-```
+- Retrieval vs rerank trade-off
+  - Env vars: `USE_VECTOR_DB`, `MATCH_RERANK_TOP_K`
+  - Code: `src/lib/actions.ts` (search for `MATCH_RERANK_TOP_K` and rerank logic)
 
-### Step 3: Set Up Your Firebase Project
+Quick operational note: If you encounter LLM rate limits (429), set these env vars for immediate relief:
 
-This application relies on Firebase for backend services. Authorized users will receive Firebase project details as part of their onboarding.
-+
+- `MATCH_RERANK_TOP_K=0` — disables LLM rerank and uses vector-only scores (recommended for dev or small free-tier quotas).
+- `MATCH_CONCURRENCY=1` — minimizes concurrent LLM calls; useful when backends or workers otherwise create bursts.
 
-3.  **Enable Authentication Methods:**
-    - In the Firebase Console, go to **Authentication** -> **Sign-in method**.
-    - Enable the following providers:
-        - Email/Password
-        - Google
-        - GitHub
-        - Microsoft
-    - For GitHub and other OAuth providers, you will need to add the callback URL provided by Firebase to your OAuth App settings.
+These two settings together will dramatically reduce LLM calls and avoid many quota errors while you evaluate or upgrade your provider plan.
 
-4.  **Set up Firestore Database:**
-    - Go to **Firestore Database** and click **"Create database"**.
-    - Start in **production mode**. This ensures your data is secure by default.
-    - Choose a location for your database.
+Circuit-breaker & retry knobs: The code now includes a Firestore-backed circuit-breaker that sets a shared cooldown when a 429/quota error is detected so all instances back off. Use the following env vars to tune retry/backoff behavior:
 
-5.  **Deploy Firestore Rules and Indexes:**
-    The application requires specific composite indexes for querying data and security rules to protect it. Instead of creating these manually, you can deploy them using the Firebase CLI.
+- `MATCH_AI_MAX_ATTEMPTS` — maximum attempts per AI call (default 3). Lower to avoid multiplied retries.
+- `MATCH_AI_BASE_DELAY_MS` — base backoff in ms (default 500). Exponential backoff + jitter is applied.
 
-    -   **Install the Firebase CLI:** If you don't have it, install it globally.
-        ```bash
-        npm install -g firebase-tools
-        ```
+These knobs + the shared cooldown help the system respect provider rate limits and avoid noisy retries from multiple processes.
 
-    -   **Login to Firebase:**
-        ```bash
-        firebase login
-        ```
+- Backfill and batching
+  - Env vars: `EMBED_BACKFILL_BATCH`
+  - Scripts: `scripts/backfill-embeddings.js`
 
-    -   **Associate the project:** Tell the CLI which Firebase project this directory is for. Replace `senseiseek-ushak` with your actual project ID.
-        ```bash
-        firebase use senseiseek-ushak
-        ```
+- Matching cache behavior & invalidation
+  - Code: `src/lib/matching-cache.ts`
 
-    -   **Deploy rules and indexes:** This command reads the `firestore.rules` and `firestore.indexes.json` files and deploys them to your project.
-        ```bash
-        firebase deploy --only firestore
-        ```
+Tuning tips:
 
-    *Note: It will take a few minutes for Firebase to build the indexes.*
+- Start with `MATCH_RERANK_TOP_K=0` (vector-only) during development to avoid LLM costs.
+- Use small backfill batches locally (`EMBED_BACKFILL_BATCH=50`) to avoid provider rate limits.
+- Confirm your embedding dimension and Pinecone index dimension match (`PINECONE_INDEX_DIM`) before upserting vectors.
 
-### Step 4: Set Up Environment Variables
+## Core: Matching (highlight)
 
-Create a file named `.env` in the root of your project. This file will hold your secret keys and client-side configuration.
+Matching is central to Sensei Seek. We implemented a production-minded, cost-aware pipeline that combines vector recall, limited AI reranking, and persistent caching to deliver high-quality matches without unbounded AI costs.
 
-```
-touch .env
-```
+Highlights:
 
-Now, open the `.env` file and add the following variables.
+- Vector-first candidate retrieval using embeddings (Pinecone adapter in `src/lib/vector-db.ts`).
+- Rerank only the top-K candidates with an LLM to produce a final score and rationale (configurable to control cost).
+- Firestore matching cache with tags for targeted invalidation to avoid repeated LLM calls on page-load.
+- Background recompute worker + admin backfill endpoints to generate missing results asynchronously and avoid 429s during user requests.
+- Feature flags (`USE_VECTOR_DB`, `USE_MATCHING_CACHE`, rerank knobs) and graceful fallbacks ensure safe rollout and resilience on AI failures.
+- Telemetry-ready (cache hit rates, LLM call counts, latencies) so ops can monitor cost and quality.
+ 
+How matching surfaces relate to UI:
 
-#### 4.1 Firebase Client Configuration (Client-Side)
+- Find Talent (Startup-facing gallery): shows each executive's single best match score across all the startup's active needs. This score is computed as the highest vector-derived or AI-derived match across those needs (vector-derived when `USE_VECTOR_DB=true` and AI disabled, vector+rerank when rerank is enabled).
+- Applicants (per-role listing): shows applicants for a specific role and uses a per-application match score computed for that role specifically (AI flow by default). Applicants therefore reflect role-specific fit while Find Talent reflects overall fit across active roles.
 
-These keys are for the client-side Firebase SDK and are safe to expose. They identify your Firebase project to the user's browser.
+See `docs/MATCHING_IMPLEMENTATION.md` for full design details, operational notes, and the implementation checklist.
 
--   **Get Your Client Config:**
-    1.  In your Firebase project settings (click the gear icon), go to the **"General"** tab.
-    2.  Scroll down to the **"Your apps"** section and find your web app.
-    3.  Select the **"Config"** option for the SDK setup and authentication.
-    4.  Firebase will show you a `firebaseConfig` object. Copy the values from it.
+### How matching works — explained for an undergraduate student
+How to understand matching (simple & practical)
 
--   **Set the Environment Variables:**
-    In your `.env` file, add the following lines, replacing the placeholder values with the ones from your `firebaseConfig` object.
+Matching in Sensei Seek is intentionally simple: first we use a fast vector search to find plausible candidates, then we optionally use a small AI reranker to refine the top few. That keeps things fast and cheap while still getting good results.
 
-    ```env
-    # Firebase Client SDK Configuration
-    NEXT_PUBLIC_FIREBASE_API_KEY="your-api-key"
-    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="senseiseek-ushak.firebaseapp.com"
-    NEXT_PUBLIC_FIREBASE_PROJECT_ID="senseiseek-ushak"
-    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="senseiseek-ushak.appspot.com"
-    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="your-sender-id"
-    NEXT_PUBLIC_FIREBASE_APP_ID="your-app-id"
-    NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="your-measurement-id"
-    ```
+In plain terms:
 
-#### 4.2 Firebase Admin SDK (Server-Side)
+- Step 1 — fast recall: we turn startup needs and executive profiles into numeric embeddings and store them in a vector index (Pinecone by default). When a startup asks for candidates, we query the vector index for the nearest executive vectors — this is extremely fast and narrows the candidate set from thousands to a few dozen.
+- Step 2 — bounded refinement: we take only the top-K results from the vector search (configurable) and, if enabled, run a single lightweight LLM rerank over that small set to produce final match scores and an optional short rationale. Because the LLM is only used on a tiny subset, token / cost exposure is limited.
 
-This secret key is for server-side actions like setting user roles. **It must be kept private.**
+Why this design?
+- Vector search is cheap and scales well for recall. LLMs are powerful for judgment and nuance but are slow/expensive if used on every candidate. The two-step design balances those trade-offs.
 
--   **Get Your Service Account Key:**
-    1.  In your Firebase project settings, go to the **"Service accounts"** tab.
-    2.  Click **"Generate new private key"** and download the JSON file.
+Developer tips:
+- If you want a quick, free dev experience: set `MATCH_RERANK_TOP_K=0` to avoid LLM calls and run `scripts/backfill-embeddings.js` to populate vectors locally.
+- The system persists a durable, per-startup vector-score map to Firestore at `matching-vector-scores/<startupId>` so the startup-facing gallery (Find Talent) can show vector-derived scores even when rerank is disabled. The background worker refreshes these durable maps and marks them with a small TTL + a `dirty` flag to coordinate updates across instances.
 
--   **Base64 Encode the Key:**
-    Open a terminal and run the correct command for your OS to encode the entire content of the JSON file.
+### How matching works — explained for a grad / PhD in machine learning
 
-    -   **macOS:** `base64 -i /path/to/your/serviceAccountKey.json | tr -d '\n'`
-    -   **Linux / Windows (WSL):** `base64 -w 0 /path/to/your/serviceAccountKey.json`
-    -   **Windows (PowerShell):** `[Convert]::ToBase64String([System.IO.File]::ReadAllBytes("C:\path\to\your\serviceAccountKey.json"))`
+Architecture and dataflow (concise):
 
-    This outputs a single, long string. Copy it.
+- Representation: Textual fields from `startup-needs` and `executive-profiles` are mapped to dense embeddings using a configurable embedding model (ENV: `EMBEDDING_API_URL`/`EMBEDDING_MODEL`). Embedding vectors are persisted in Firestore `embeddings/*` docs and upserted into Pinecone for nearest-neighbor search.
 
--   **Set the Environment Variable:**
-    In your `.env` file, add the following line, pasting the Base64 string as the value:
-    ```env
-    # Firebase Admin SDK
-    FIREBASE_ADMIN_SDK_CONFIG_BASE64="<PASTE_YOUR_BASE64_ENCODED_KEY_HERE>"
-    ```
+- Retrieval: For a given startup need, we issue a vector similarity query (ANN) to Pinecone to retrieve the top-N candidate executive vectors. Default index metric is cosine similarity (controlled via Pinecone index configuration). We perform a minimal pre-filter step (metadata filters and optional heuristics) to avoid retrieving obviously irrelevant candidates and reduce the query surface.
 
-#### 4.3 Gemini API Key (For Generative AI)
+- Reranking: The top-K subset is reranked by an LLM-based scoring function. The reranker maps candidate + query into a numeric score and a short textual rationale. Design choices:
+  - We restrict the reranker to a small K (configurable) to bound token costs and latency.
+  - The reranker uses a deterministic prompt template and returns a structured JSON-like response (score, reasoning). We apply conservative parsing and fallback behavior in case of parse or API errors.
 
-The AI features are powered by the Google Gemini API.
+- Caching & consistency: Reranked results (scores + rationales) are written into a Firestore-based matching cache keyed by `startupId` (and optionally `needId`) with tag metadata for targeted invalidation. A recomputeClaim pattern ensures at-most-once worker claims when regenerating cache entries.
 
--   **Get Your API Key:**
-    1.  Visit [Google AI Studio](https://aistudio.google.com/app/apikey).
-    2.  Click **"Create API key"** and copy it.
+- Operational considerations & failure modes:
+  - Embedding model dimension must match Pinecone index dimension (env: `PINECONE_INDEX_DIM`). Dimension mismatch is a hard failure at upsert/query time.
+  - LLM failures (rate limits, 429s) are mitigated by: (a) caching, (b) feature-flagged rerank that can be disabled, (c) async background workers for backfills and recompute, and (d) graceful fallbacks (vector-only result with score=0 or heuristic scores).
+  - Cold-start: Newly created startup needs may have no cached entry; the admin backfill endpoints and the worker are used to precompute results.
 
--   **Set the Environment Variable:**
-    In your `.env` file, add the following line:
-    ```env
-    # Gemini API Key
-    GEMINI_API_KEY="<PASTE_YOUR_GEMINI_API_KEY_HERE>"
-    ```
+- Metrics & evaluation:
+  - We instrument cache hit/miss rates, LLM call counts, and re-rank latencies. Typical evaluation criteria: precision@K and qualitative human review of LLM rationales.
 
-### Step 5: Run the Application Locally
+- Extensibility notes:
+  - The reranker can be replaced by a learned pairwise model (e.g., a lightweight cross-encoder fine-tuned on labeled pairs) if you need lower-cost repeat inference at scale.
+  - The pipeline supports alternate vector stores (the code uses an adapter pattern) and multiple embedding providers.
 
-You're all set! Run the development server.
+If you want, I can also add a tiny diagram (ASCII or SVG) and a short checklist of hyperparameters and where to tune them in the codebase (embedding model, PINECONE_INDEX_DIM, MATCH_RERANK_TOP_K, EMBED_BACKFILL_BATCH).
 
-```bash
-npm run dev
-```
+## Quick update: durable precompute & worker persistence
 
-The application should now be running at `http://localhost:9002`.
-
-### Step 6: Create Your First Admin User
-
-The admin panel is protected, and there are no admins by default. Follow these steps to create your first admin user using a secure, one-time script.
-
-1.  **Sign Up Normally**:
-    -   Navigate to `http://localhost:9002/signup`.
-    -   Create a new user account with your email. You can choose either the "Startup" or "Executive" role; this will be overridden by the script.
-
-2.  **Run the Promotion Script**:
-    -   Make sure your development server is still running.
-    -   Open a **new terminal window** in the same project directory.
-    -   Run the following command, replacing `your-email@example.com` with the email address of the user you just created:
-        ```bash
-        node scripts/promote-admin.js your-email@example.com
-        ```
-    -   You should see a success message in the terminal, like: `Successfully promoted your-email@example.com to admin.`
-
-3.  **Verify Admin Access**:
-    -   Log into the application with the user account you just promoted.
-    -   Navigate to the admin dashboard at `http://localhost:9002/admin/dashboard`.
-    -   You should now have full access to the admin panel.
-
-Your user now has admin privileges. This script is safe to use and does not require any code modifications. You can use it to promote other admins in the future as needed, both locally and in production.
-
-### A Note on Changing Your Firebase Project
-
-If you need to switch to a different Firebase project after the initial setup, you must update the following places:
-
-1.  **`.env` File**: This is the most important step. You must regenerate your client-side `firebaseConfig` object from the new Firebase project and update all the `NEXT_PUBLIC_FIREBASE_*` variables in your `.env` file accordingly.
-2.  **Firebase CLI Context**: In your terminal, run `firebase use <your-new-project-id>` to point the Firebase CLI to your new project. This ensures that commands like `firebase deploy` target the correct backend.
-3.  **OAuth Providers**: If you have configured OAuth providers (Google, GitHub, etc.), you must update the callback URLs in the Firebase Authentication console and in your app's settings on each provider's developer console to reflect the new project's `authDomain`.
+We now persist a per-startup execVectorScores map to Firestore in `matching-vector-scores/<startupId>` with a TTL and a `dirty` flag. The recompute worker writes these docs after vector queries and after LLM reranks so that multi-instance deployments can share precomputed vector-derived scores. Make sure to wire invalidation (`markStartupVectorScoresDirty`) from startup need and executive profile update flows to avoid stale results.
 
 ---
-
-## Deployment to Vercel
-
-Deploying the application is straightforward with Vercel.
-
-### Step 1: Push to GitHub
-
-Initialize a Git repository, commit your code, and push it to a new repository on GitHub.
-
-### Step 2: Connect Vercel
-
-1.  Go to your [Vercel Dashboard](https://vercel.com/dashboard).
-2.  Click **"Add New... -> Project"**.
-3.  Import the GitHub repository you just created.
-4.  Vercel will automatically detect that this is a Next.js project.
-
-### Step 3: Configure Environment Variables
-
-This is the most critical step for deployment.
-
-1.  In your Vercel project settings, go to the **"Settings" -> "Environment Variables"** section.
-2.  Add all the same variables you created in your local `.env` file, including all `NEXT_PUBLIC_` variables, `FIREBASE_ADMIN_SDK_CONFIG_BASE64`, and `GEMINI_API_KEY`.
-3.  Paste the corresponding values for each.
-
-### Step 4: Deploy
-
-Click the **"Deploy"** button. Vercel will build and deploy your application. Once finished, it will provide you with a URL to your live site.
-
-Congratulations, your Sensei Seek marketplace is now live! Remember to follow **Step 6** from the local setup guide on your live application to create your production admin user. This can be done by connecting your Vercel project to a terminal and running the promotion script.
+````

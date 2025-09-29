@@ -3,7 +3,7 @@
 
 import { useState, useTransition } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { updateStartupNeedStatus } from '@/lib/actions';
+import { updateStartupNeedStatus } from '@/lib/client-actions';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
@@ -53,7 +53,7 @@ export function StatusToggle({ needId, initialStatus }: StatusToggleProps) {
     >
       <span className="sr-only">Use to toggle status</span>
       {isPending && (
-          <Loader2 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-white" />
+        <Loader2 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-white" />
       )}
       <span
         aria-hidden="true"

@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { getStartupNeed } from "@/lib/actions";
+import { getStartupNeed } from "@/lib/client-actions";
 import { ViewNeedClient } from "./view-need-client";
 import { StartupNeeds } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
@@ -40,7 +40,7 @@ export default function ViewStartupNeedPage() {
             </div>
         );
     }
-    
+
     return (
         <div className="mx-auto">
             <ViewNeedClient initialData={initialData} errorMessage={errorMessage} />

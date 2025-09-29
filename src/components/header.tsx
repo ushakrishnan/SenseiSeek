@@ -11,7 +11,7 @@ import { useAuth } from './auth-provider';
 import { auth } from '@/lib/firebase-client';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { clearSessionCookie } from '@/lib/actions';
+import { clearSessionCookie } from '@/lib/client-actions';
 
 export function Header() {
   const { user, userDetails } = useAuth();

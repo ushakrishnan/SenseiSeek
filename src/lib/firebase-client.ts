@@ -14,6 +14,16 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
+// Sanity checks: if any client-visible Firebase config values are missing, log a clear
+// warning to help diagnose `auth/network-request-failed` and other client auth issues.
+if (typeof window !== 'undefined') {
+  const missing = Object.entries(firebaseConfig).filter(([k, v]) => !v).map(([k]) => k);
+  if (missing.length) {
+    console.warn('[firebase-client] Missing NEXT_PUBLIC Firebase config keys:', missing.join(', '));
+    console.warn('[firebase-client] Ensure .env has NEXT_PUBLIC_FIREBASE_* variables and restart the dev server.');
+  }
+}
+
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const auth = getAuth(app);
 
