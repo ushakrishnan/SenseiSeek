@@ -4,7 +4,7 @@ export async function GET(req: Request, { params }: any) {
     try {
         const user = await verifySessionCookie(req);
         if (!user) return jsonError('Not authenticated', 401);
-        const adminId = params?.adminId || (user as any).uid;
+        const adminId = (await params)?.adminId || (user as any).uid;
         const { getAdminDashboardStats } = await import('@/lib/actions');
         const result = await getAdminDashboardStats(adminId);
         return jsonOk(result);

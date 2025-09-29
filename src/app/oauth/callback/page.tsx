@@ -35,8 +35,13 @@ export default function OAuthCallbackPage() {
                     else if (role === 'executive') router.replace('/executives/dashboard');
                     else router.replace('/startups/dashboard');
                 } else {
-                    // New user — redirect to role selection without exposing token
-                    const q = provider ? `?provider=${encodeURIComponent(provider)}` : '';
+                    // New user — redirect to role selection keeping the token so the
+                    // role-selection page can exchange it for a server session cookie.
+                    // We still include the provider param when present.
+                    const qParts = [] as string[];
+                    if (provider) qParts.push(`provider=${encodeURIComponent(provider)}`);
+                    if (token) qParts.push(`token=${encodeURIComponent(token)}`);
+                    const q = qParts.length ? `?${qParts.join('&')}` : '';
                     router.replace(`/signup/role-selection${q}`);
                 }
             } catch (err: unknown) {
@@ -45,8 +50,13 @@ export default function OAuthCallbackPage() {
                 const e = err as { message?: string } | undefined;
                 console.error('OAuth callback error', err);
                 setError(e?.message || 'OAuth sign-in failed.');
-                // fallback: send to role-selection so user can continue manually
-                const q = provider ? `?provider=${encodeURIComponent(provider)}` : '';
+                // fallback: send to role-selection so user can continue manually.
+                // Preserve the token (if available) so role-selection can complete
+                // the exchange and finalize signup.
+                const qParts = [] as string[];
+                if (provider) qParts.push(`provider=${encodeURIComponent(provider)}`);
+                if (token) qParts.push(`token=${encodeURIComponent(token)}`);
+                const q = qParts.length ? `?${qParts.join('&')}` : '';
                 router.replace(`/signup/role-selection${q}`);
             }
         })();
