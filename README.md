@@ -20,13 +20,13 @@ Below are short animated walkthroughs (GIFs) that illustrate three core perspect
   <a href="public/assets/startup2.gif"><img src="public/assets/startup2.gif" alt="Startup experience" width="200"/></a>
 </p>
 
-- Executive workflow — `public/assets/exec2.gif`
+- Executive workflow — 
   - Focus: quick discovery → review → apply/shortlist. Expect: minimal clicks, clear fit signal, and an emphasis on low-effort actions for executives who evaluate many opportunities.
 
-- Market & solution overview — `public/assets/market2.gif`
+- Market & solution overview — 
   - Focus: high-level marketplace dynamics (how matches flow from vector retrieval, optional rerank, and durable cache into the gallery). Expect: emphasis on responsiveness and how background recompute keeps results fresh.
 
-- Startup experience — `public/assets/startup2.gif`
+- Startup experience — 
   - Focus: creating a need, viewing matched executives, and starting outreach. Expect: a compact flow where startups can identify and contact candidates quickly; AI help is conservative and opt-in.
 
 Notes:
