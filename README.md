@@ -9,6 +9,30 @@ We welcome contributions, bug reports, and constructive feedback. Read the short
 
 ---
 
+## Visual walkthrough & persona highlights
+
+Below are short animated walkthroughs (GIFs) that illustrate three core perspectives of the product. These visuals focus on expected user experience and product intent rather than repeating implementation details.
+
+<!-- Thumbnails: click to open the full GIF -->
+<p>
+  <a href="public/assets/exec2.gif"><img src="public/assets/exec2.gif" alt="Executive workflow" width="200" style="margin-right:8px;"/></a>
+  <a href="public/assets/market2.gif"><img src="public/assets/market2.gif" alt="Market & solution overview" width="200" style="margin-right:8px;"/></a>
+  <a href="public/assets/startup2.gif"><img src="public/assets/startup2.gif" alt="Startup experience" width="200"/></a>
+</p>
+
+- Executive workflow — `public/assets/exec2.gif`
+  - Focus: quick discovery → review → apply/shortlist. Expect: minimal clicks, clear fit signal, and an emphasis on low-effort actions for executives who evaluate many opportunities.
+
+- Market & solution overview — `public/assets/market2.gif`
+  - Focus: high-level marketplace dynamics (how matches flow from vector retrieval, optional rerank, and durable cache into the gallery). Expect: emphasis on responsiveness and how background recompute keeps results fresh.
+
+- Startup experience — `public/assets/startup2.gif`
+  - Focus: creating a need, viewing matched executives, and starting outreach. Expect: a compact flow where startups can identify and contact candidates quickly; AI help is conservative and opt-in.
+
+Notes:
+- The GIFs live in `public/assets/` and are intended as demo/teaching aids — short, illustrative, and not exhaustive.
+- Use these when demoing the app to stakeholders or onboarding contributors so they understand the intended user flows and UX priorities.
+
 ## Features
 
 - Dual-Sided Marketplace: Separate, tailored experiences for both Startups and Executives.
@@ -138,4 +162,21 @@ Architecture and dataflow (concise):
 We now persist a per-startup execVectorScores map to Firestore in `matching-vector-scores/<startupId>` with a TTL and a `dirty` flag. The recompute worker writes these docs after vector queries and after LLM reranks so that multi-instance deployments can share precomputed vector-derived scores. Make sure to wire invalidation (`markStartupVectorScoresDirty`) from startup need and executive profile update flows to avoid stale results.
 
 ---
+
+## Full visuals
+
+The full-size walkthroughs are shown here for reference. They are intentionally placed at the end so the main README stays compact; click the thumbnails above to jump here or open the GIF directly.
+
+### Executive workflow
+
+![Executive workflow](public/assets/exec2.gif)
+
+### Market & solution overview
+
+![Market & solution overview](public/assets/market2.gif)
+
+### Startup experience
+
+![Startup experience](public/assets/startup2.gif)
+
 
