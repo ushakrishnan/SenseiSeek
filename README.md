@@ -11,7 +11,7 @@ We welcome contributions, bug reports, and constructive feedback. Read the short
 
 ## Visual walkthrough & persona highlights
 
-Below are short animated walkthroughs (GIFs) that illustrate three core perspectives of the product. These visuals focus on expected user experience and product intent rather than repeating implementation details.
+Below are short animated walkthroughs (GIFs) that illustrate three core perspectives of the product. These visuals focus on expected user experience and product intent.
 
 <!-- Thumbnails: click to open the full GIF -->
 <p>
