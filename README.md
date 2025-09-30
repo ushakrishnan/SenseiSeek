@@ -29,10 +29,6 @@ Below are short animated walkthroughs (GIFs) that illustrate three core perspect
 - Startup experience — 
   - Focus: creating a need, viewing matched executives, and starting outreach. Expect: a compact flow where startups can identify and contact candidates quickly; AI help is conservative and opt-in.
 
-Notes:
-- The GIFs live in `public/assets/` and are intended as demo/teaching aids — short, illustrative, and not exhaustive.
-- Use these when demoing the app to stakeholders or onboarding contributors so they understand the intended user flows and UX priorities.
-
 ## Features
 
 - Dual-Sided Marketplace: Separate, tailored experiences for both Startups and Executives.
