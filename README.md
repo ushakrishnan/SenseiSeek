@@ -15,16 +15,16 @@ Below are short animated walkthroughs (GIFs) that illustrate three core perspect
 
 <!-- Thumbnails: click to open the full GIF -->
 <p>
-  <a href="public/assets/exec2.gif"><img src="public/assets/exec2.gif" alt="Executive workflow" width="200" style="margin-right:8px;"/></a>
-  <a href="public/assets/market2.gif"><img src="public/assets/market2.gif" alt="Market & solution overview" width="200" style="margin-right:8px;"/></a>
-  <a href="public/assets/startup2.gif"><img src="public/assets/startup2.gif" alt="Startup experience" width="200"/></a>
+    <a href="public/assets/market2.gif"><img src="public/assets/market2.gif" alt="Market & solution overview" width="200" style="margin-right:8px;"/></a>
+    <a href="public/assets/exec2.gif"><img src="public/assets/exec2.gif" alt="Executive workflow" width="200" style="margin-right:8px;"/></a>
+    <a href="public/assets/startup2.gif"><img src="public/assets/startup2.gif" alt="Startup experience" width="200"/></a>
 </p>
-
-- Executive workflow — 
-  - Focus: quick discovery → review → apply/shortlist. Expect: minimal clicks, clear fit signal, and an emphasis on low-effort actions for executives who evaluate many opportunities.
 
 - Market & solution overview — 
   - Focus: high-level marketplace dynamics (how matches flow from vector retrieval, optional rerank, and durable cache into the gallery). Expect: emphasis on responsiveness and how background recompute keeps results fresh.
+
+- Executive workflow — 
+  - Focus: quick discovery → review → apply/shortlist. Expect: minimal clicks, clear fit signal, and an emphasis on low-effort actions for executives who evaluate many opportunities.
 
 - Startup experience — 
   - Focus: creating a need, viewing matched executives, and starting outreach. Expect: a compact flow where startups can identify and contact candidates quickly; AI help is conservative and opt-in.
