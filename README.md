@@ -1,7 +1,7 @@
 
 # Sensei Seek: Fractional Executive Marketplace
 
-[![License: MIT](/assets/badges/license.svg)](./LICENSE) [![Code of Conduct](/assets/badges/coc.svg)](./CODE_OF_CONDUCT.md) [![Tech: Next.js](/assets/badges/nextjs.svg)](https://nextjs.org) [![Tech: TypeScript](/assets/badges/typescript.svg)](https://www.typescriptlang.org) [![Tech: Pinecone](/assets/badges/pinecone.svg)](https://www.pinecone.io) [![Tech: Firebase](/assets/badges/firebase.svg)](https://firebase.google.com)
+[![License: MIT](public/assets/badges/license.svg)](./LICENSE) [![Code of Conduct](public/assets/badges/coc.svg)](./CODE_OF_CONDUCT.md) [![Tech: Next.js](public/assets/badges/nextjs.svg)](https://nextjs.org) [![Tech: TypeScript](public/assets/badges/typescript.svg)](https://www.typescriptlang.org) [![Tech: Pinecone](public/assets/badges/pinecone.svg)](https://www.pinecone.io) [![Tech: Firebase](public/assets/badges/firebase.svg)](https://firebase.google.com)
 
 Sensei Seek is now an open-source educational project aimed at helping developers, researchers, and product teams learn about building an AI-assisted marketplace. This repository contains the application code, documentation, and scripts needed to run, evaluate, and extend the matching pipeline, embedding backfill, and admin tooling.
 
@@ -138,4 +138,4 @@ Architecture and dataflow (concise):
 We now persist a per-startup execVectorScores map to Firestore in `matching-vector-scores/<startupId>` with a TTL and a `dirty` flag. The recompute worker writes these docs after vector queries and after LLM reranks so that multi-instance deployments can share precomputed vector-derived scores. Make sure to wire invalidation (`markStartupVectorScoresDirty`) from startup need and executive profile update flows to avoid stale results.
 
 ---
-````
+
