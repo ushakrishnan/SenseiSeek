@@ -1,9 +1,11 @@
 
-# Sensei Seek: Fractional Executive Marketplace
+# SenseiSeek: Fractional Executive Marketplace
 
 [![License: MIT](public/assets/badges/license.svg)](./LICENSE) [![Code of Conduct](public/assets/badges/coc.svg)](./CODE_OF_CONDUCT.md) [![Tech: Next.js](public/assets/badges/nextjs.svg)](https://nextjs.org) [![Tech: TypeScript](public/assets/badges/typescript.svg)](https://www.typescriptlang.org) [![Tech: Pinecone](public/assets/badges/pinecone.svg)](https://www.pinecone.io) [![Tech: Firebase](public/assets/badges/firebase.svg)](https://firebase.google.com)
 
-Sensei Seek is now an open-source educational project aimed at helping developers, researchers, and product teams learn about building an AI-assisted marketplace. This repository contains the application code, documentation, and scripts needed to run, evaluate, and extend the matching pipeline, embedding backfill, and admin tooling.
+**GitHub Repository:** [https://github.com/ushakrishnan/SenseiSeek](https://github.com/ushakrishnan/SenseiSeek)
+
+SenseiSeek is an open-source educational project aimed at helping developers, researchers, and product teams learn about building an AI-assisted marketplace. This repository contains the application code, documentation, and scripts needed to run, evaluate, and extend the matching pipeline, embedding backfill, and admin tooling.
 
 We welcome contributions, bug reports, and constructive feedback. Read the short contribution notes below and follow the Code of Conduct when participating in the project.
 
