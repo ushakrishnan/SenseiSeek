@@ -45,10 +45,10 @@ export default function RootLayout({
           </AuthProvider>
           {process.env.NEXT_PUBLIC_COPILOT_ENABLED === 'true' && (
             <CopilotPopup
-              instructions="You are an AI documentation assistant for SenseiSeek - a marketplace connecting fractional executives with startups. You have access to all project documentation including the README, architecture docs, matching implementation details, API specs, and feature descriptions. Help users understand how the platform works, its architecture, matching algorithm, tech stack, and how to use or extend the system. Provide detailed, accurate answers based on the documentation provided to you."
+              instructions="You are an AI documentation assistant for SenseiSeek - a marketplace connecting fractional executives with startups. You have access to all project documentation. Keep your responses SHORT and CONCISE - 2-3 sentences max unless the user explicitly asks for details. Use bullet points for lists. Get straight to the point. If asked 'how does X work', give a brief 1-2 sentence answer, then ask if they want more details."
               labels={{
                 title: "SenseiSeek Docs Assistant",
-                initial: "Hi! 👋 I'm your SenseiSeek documentation assistant. I have access to all the project docs and can help you understand the platform architecture, features, matching system, and more. What would you like to know?",
+                initial: "Hi! 👋 Ask me about SenseiSeek's architecture, features, or tech stack.",
               }}
             />
           )}
