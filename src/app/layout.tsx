@@ -4,6 +4,8 @@ import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/components/auth-provider';
 import FirebaseAnalytics from '@/components/firebase-analytics';
+import { CopilotKit } from '@copilotkit/react-core';
+import '@copilotkit/react-ui/styles.css';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -24,18 +26,20 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased min-h-screen flex flex-col bg-background">
-        <AuthProvider>
-          <ThemeProvider
+        <CopilotKit publicApiKey={process.env.NEXT_PUBLIC_COPILOTKIT_PUBLIC_API_KEY || ''}>
+          <AuthProvider>
+            <ThemeProvider
               attribute="class"
               defaultTheme="system"
               enableSystem
               disableTransitionOnChange
-          >
-            {children}
-            <Toaster />
-            <FirebaseAnalytics />
-          </ThemeProvider>
-        </AuthProvider>
+            >
+              {children}
+              <Toaster />
+              <FirebaseAnalytics />
+            </ThemeProvider>
+          </AuthProvider>
+        </CopilotKit>
       </body>
     </html>
   );
