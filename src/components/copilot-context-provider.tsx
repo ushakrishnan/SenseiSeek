@@ -47,13 +47,13 @@ export function CopilotContextProvider({ children }: { children: React.ReactNode
 
     // Provide README context
     useCopilotReadable({
-        description: "The main README.md file that provides an overview of Sensei Seek, tech stack, features, matching implementation, and setup instructions",
+        description: "The main README.md file that provides an overview of SenseiSeek, tech stack, features, matching implementation, and setup instructions",
         value: readmeContent,
     });
 
     // Provide Architecture documentation
     useCopilotReadable({
-        description: "Architecture documentation explaining the system design, components, data models, and technical architecture of Sensei Seek",
+        description: "Architecture documentation explaining the system design, components, data models, and technical architecture of SenseiSeek",
         value: docsContent['ARCHITECTURE.md'] || '',
     });
 
