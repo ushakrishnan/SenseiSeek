@@ -5,8 +5,8 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/components/auth-provider';
 import FirebaseAnalytics from '@/components/firebase-analytics';
 import { CopilotKit } from '@copilotkit/react-core';
-import { CopilotPopup } from '@copilotkit/react-ui';
 import { CopilotContextProvider } from '@/components/copilot-context-provider';
+import { CopilotPopupWrapper } from '@/components/copilot-popup-wrapper';
 import '@copilotkit/react-ui/styles.css';
 import './globals.css';
 
@@ -44,13 +44,7 @@ export default function RootLayout({
             </ThemeProvider>
           </AuthProvider>
           {process.env.NEXT_PUBLIC_COPILOT_ENABLED === 'true' && (
-            <CopilotPopup
-              instructions="You are an AI documentation assistant for SenseiSeek - a marketplace connecting fractional executives with startups. You have access to all project documentation. Keep your responses SHORT and CONCISE - 2-3 sentences max unless the user explicitly asks for details. Use bullet points for lists. Get straight to the point. If asked 'how does X work', give a brief 1-2 sentence answer, then ask if they want more details."
-              labels={{
-                title: "SenseiSeek Docs Assistant",
-                initial: "Hi! 👋 Ask me about SenseiSeek's architecture, features, or tech stack.",
-              }}
-            />
+            <CopilotPopupWrapper />
           )}
         </CopilotKit>
       </body>
