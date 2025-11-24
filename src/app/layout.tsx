@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/components/auth-provider';
 import FirebaseAnalytics from '@/components/firebase-analytics';
 import { CopilotKit } from '@copilotkit/react-core';
+import { CopilotPopup } from '@copilotkit/react-ui';
 import '@copilotkit/react-ui/styles.css';
 import './globals.css';
 
@@ -37,6 +38,13 @@ export default function RootLayout({
               {children}
               <Toaster />
               <FirebaseAnalytics />
+              <CopilotPopup
+                instructions="You are an AI assistant helping users with the Sensei Seek platform - a marketplace connecting fractional executives with startups. Help users navigate the platform, understand features, and answer questions about matching, profiles, and opportunities."
+                labels={{
+                  title: "Sensei Seek Assistant",
+                  initial: "Hi! 👋 I'm your Sensei Seek assistant. How can I help you today?",
+                }}
+              />
             </ThemeProvider>
           </AuthProvider>
         </CopilotKit>
