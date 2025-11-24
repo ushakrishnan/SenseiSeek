@@ -6,6 +6,7 @@ import { AuthProvider } from '@/components/auth-provider';
 import FirebaseAnalytics from '@/components/firebase-analytics';
 import { CopilotKit } from '@copilotkit/react-core';
 import { CopilotPopup } from '@copilotkit/react-ui';
+import { CopilotContextProvider } from '@/components/copilot-context-provider';
 import '@copilotkit/react-ui/styles.css';
 import './globals.css';
 
@@ -28,25 +29,27 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased min-h-screen flex flex-col bg-background">
         <CopilotKit publicApiKey={process.env.NEXT_PUBLIC_COPILOTKIT_PUBLIC_API_KEY || ''}>
-          <AuthProvider>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="system"
-              enableSystem
-              disableTransitionOnChange
-            >
-              {children}
-              <Toaster />
-              <FirebaseAnalytics />
-              <CopilotPopup
-                instructions="You are an AI assistant helping users with the Sensei Seek platform - a marketplace connecting fractional executives with startups. Help users navigate the platform, understand features, and answer questions about matching, profiles, and opportunities."
-                labels={{
-                  title: "Sensei Seek Assistant",
-                  initial: "Hi! 👋 I'm your Sensei Seek assistant. How can I help you today?",
-                }}
-              />
-            </ThemeProvider>
-          </AuthProvider>
+          <CopilotContextProvider>
+            <AuthProvider>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="system"
+                enableSystem
+                disableTransitionOnChange
+              >
+                {children}
+                <Toaster />
+                <FirebaseAnalytics />
+                <CopilotPopup
+                  instructions="You are an AI documentation assistant for Sensei Seek - a marketplace connecting fractional executives with startups. You have access to all project documentation including the README, architecture docs, matching implementation details, API specs, and feature descriptions. Help users understand how the platform works, its architecture, matching algorithm, tech stack, and how to use or extend the system. Provide detailed, accurate answers based on the documentation provided to you."
+                  labels={{
+                    title: "Sensei Seek Docs Assistant",
+                    initial: "Hi! 👋 I'm your Sensei Seek documentation assistant. I have access to all the project docs and can help you understand the platform architecture, features, matching system, and more. What would you like to know?",
+                  }}
+                />
+              </ThemeProvider>
+            </AuthProvider>
+          </CopilotContextProvider>
         </CopilotKit>
       </body>
     </html>
