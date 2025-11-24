@@ -103,11 +103,10 @@ export function Header() {
         </div>
 
         <div className="flex flex-1 items-center justify-end space-x-2">
-          {/* Promotional external repo link removed for private distribution. */}
-          <Button variant="ghost" size="icon" aria-hidden title="Repository (private)">
-            <span>
+          <Button variant="ghost" size="icon" asChild>
+            <a href="https://github.com/ushakrishnan/SenseiSeek" target="_blank" rel="noopener noreferrer" title="View on GitHub">
               <GitHubIcon className="h-4 w-4" />
-            </span>
+            </a>
           </Button>
           <ThemeToggle />
           {user ? (
